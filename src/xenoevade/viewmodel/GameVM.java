@@ -9,6 +9,7 @@ package xenoevade.viewmodel;
 
 import xenoevade.model.DB; //untuk koneksi database
 import xenoevade.model.Entity; //untuk representasi objek game parent
+import xenoevade.model.Explosion;
 import xenoevade.model.Player; //Import class Player
 import xenoevade.model.Alien; //Import class Alien
 import xenoevade.model.Bullet; //Import class Bullet
@@ -45,6 +46,7 @@ public class GameVM implements Runnable {
     private List<Entity> obstacles; // atribut list objek obstacle
     private List<Entity> playerBullets; // atribut list peluru pemain
     private List<Entity> alienBullets; // atribut list peluru alien
+    private List<Entity> explosions;
 
     // atribut ukuran area game
     private final int GAME_WIDTH = 800; // lebar area game
@@ -65,6 +67,7 @@ public class GameVM implements Runnable {
         playerBullets = Collections.synchronizedList(new ArrayList<>());
         alienBullets = Collections.synchronizedList(new ArrayList<>());
         obstacles = new ArrayList<>();
+        explosions = Collections.synchronizedList(new ArrayList<>());
 
         // load data player dari database
         loadPlayerData();
@@ -253,6 +256,18 @@ public class GameVM implements Runnable {
                 }
             }
         }
+
+        synchronized (explosions) {
+            for (int i = 0; i < explosions.size(); i++) {
+                Explosion ex = (Explosion) explosions.get(i);
+                ex.update(); // Jalankan animasi frame berikutnya
+                
+                // Jika animasi sudah frame terakhir (selesai)
+                if (ex.isFinished()) {
+                    explosions.remove(i--); // Hapus dari memori
+                }
+            }
+        }
     }
 
     private void checkCollisions() {
@@ -273,8 +288,10 @@ public class GameVM implements Runnable {
                             Entity a = aliens.get(j);
                             if (b.getBounds().intersects(a.getBounds())) {
                                 // kena alien
+                                explosions.add(new Explosion(a.x, a.y));
                                 aliens.remove(j); // hapus alien
                                 score += 10; // tambah skor
+                                
                                 // aliens.remove(j); // HAPUS DUPLIKAT REMOVE
                                 hit = true;
                                 break;
@@ -374,5 +391,11 @@ public class GameVM implements Runnable {
 
     public int getMissed() {
         return missed;
+    }
+    
+    public List<Entity> getExplosions() {
+        synchronized (explosions) {
+            return new ArrayList<>(explosions);
+        }
     }
 }

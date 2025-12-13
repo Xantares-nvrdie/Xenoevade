@@ -74,23 +74,23 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
                 int k = e.getKeyCode();
 
                 // Saat tombol DITEKAN, set flag jadi true
-                if (k == KeyEvent.VK_LEFT)
+                if (k == KeyEvent.VK_A)
                     isLeft = true;
-                if (k == KeyEvent.VK_RIGHT)
+                if (k == KeyEvent.VK_D)
                     isRight = true;
-                if (k == KeyEvent.VK_UP)
+                if (k == KeyEvent.VK_W)
                     isUp = true;
-                if (k == KeyEvent.VK_DOWN)
+                if (k == KeyEvent.VK_S)
                     isDown = true;
 
                 // Update ke ViewModel
                 viewModel.updatePlayerInput(isUp, isDown, isLeft, isRight);
 
                 // Aksi sekali tekan (seperti menembak) tetap di sini
-                if (k == KeyEvent.VK_Z)
+                if (k == KeyEvent.VK_SPACE)
                     viewModel.playerShoot();
 
-                if (k == KeyEvent.VK_SPACE) {
+                if (k == KeyEvent.VK_ENTER) {
                     viewModel.stopGame(true);
                     mainFrame.showMenu();
                 }
@@ -101,13 +101,13 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
                 int k = e.getKeyCode();
 
                 // Saat tombol DILEPAS, set flag jadi false
-                if (k == KeyEvent.VK_LEFT)
+                if (k == KeyEvent.VK_A)
                     isLeft = false;
-                if (k == KeyEvent.VK_RIGHT)
+                if (k == KeyEvent.VK_D)
                     isRight = false;
-                if (k == KeyEvent.VK_UP)
+                if (k == KeyEvent.VK_W)
                     isUp = false;
-                if (k == KeyEvent.VK_DOWN)
+                if (k == KeyEvent.VK_S)
                     isDown = false;
 
                 // Update ke ViewModel agar player berhenti
@@ -177,6 +177,9 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
         // 5. Gambar Peluru Alien
         for (Entity b : viewModel.getAlienBullets()) {
             b.render(g);
+        }
+        for (Entity ex : viewModel.getExplosions()) {
+            ex.render(g); // Render frame animasi saat ini
         }
 
         // 6. Gambar HUD (Skor & Status)

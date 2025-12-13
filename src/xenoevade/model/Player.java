@@ -7,12 +7,19 @@ Description: Class to represent the player spaceship
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 package xenoevade.model;
 
+import java.awt.Image; //untuk variabel penampung gambar
 import javax.imageio.ImageIO; //untuk membaca file gambar
 
 public class Player extends Entity {
     private int velX; // kecepatan horizontal
     private int velY; // kecepatan vertikal
     private int speed = 5; // kecepatan gerak player
+
+    // Atribut untuk menyimpan variasi aset gambar
+    private Image imgCenter;
+    private Image imgLeft;
+    private Image imgRight;
+
     public Player(int x, int y) {
         /*
          * Method Player
@@ -26,17 +33,23 @@ public class Player extends Entity {
 
         this.velX = 0;
         this.velY = 0;
-        loadAsset();
+        loadAssets(); // memuat semua variasi gambar
     }
 
-    private void loadAsset() {
+    private void loadAssets() {
         /*
-         * Method loadAsset
-         * Method private untuk memuat gambar sprite player
+         * Method loadAssets
+         * Method private untuk memuat gambar sprite player (kiri, kanan, tengah)
          */
         try {
             // Mengambil gambar dari folder assets
-            this.sprite = ImageIO.read(getClass().getResource("/assets/player.png"));
+            imgCenter = ImageIO.read(getClass().getResource("/assets/player.png"));
+            imgLeft = ImageIO.read(getClass().getResource("/assets/player_left.png"));
+            imgRight = ImageIO.read(getClass().getResource("/assets/player_right.png"));
+
+            // Set gambar default (posisi lurus)
+            this.sprite = imgCenter;
+
         } catch (Exception e) {
             System.err.println("Error loading player sprite: " + e.getMessage());
         }
@@ -46,11 +59,20 @@ public class Player extends Entity {
     public void update() {
         /*
          * Method update
-         * Logika pergerakan player berdasarkan input user
+         * Logika pergerakan player dan animasi sprite berdasarkan input user
          */
 
         x += velX;
         y += velY;
+
+        // Logika pergantian gambar berdasarkan arah gerak (Animasi)
+        if (velX < 0) {
+            this.sprite = imgLeft; // Jika gerak ke kiri, pakai gambar miring kiri
+        } else if (velX > 0) {
+            this.sprite = imgRight; // Jika gerak ke kanan, pakai gambar miring kanan
+        } else {
+            this.sprite = imgCenter; // Jika diam/gerak vertikal, pakai gambar lurus
+        }
 
         // Logika agar player tidak keluar dari layar (Asumsi layar 800x600)
         if (x < 0)
@@ -62,9 +84,13 @@ public class Player extends Entity {
         if (y > 600 - height)
             y = 600 - height;
     }
-    
-    // Method baru untuk mengatur arah gerak
+
     public void setDirection(boolean up, boolean down, boolean left, boolean right) {
+        /*
+         * Method setDirection
+         * Method untuk mengatur arah gerak player berdasarkan input keyboard
+         */
+
         // Reset kecepatan
         velX = 0;
         velY = 0;
