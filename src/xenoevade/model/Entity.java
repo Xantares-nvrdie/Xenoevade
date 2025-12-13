@@ -7,10 +7,10 @@ Description: Abstract class to represent game objects (Player, Alien, etc)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 package xenoevade.model;
 
-import java.awt.Color; // PENTING: Untuk warna fallback
-import java.awt.Graphics; // PENTING: Untuk menggambar
-import java.awt.Image; // PENTING: Untuk menampung aset gambar
-import java.awt.Rectangle; // Untuk collision detection
+import java.awt.Color; //untuk warna fallback
+import java.awt.Graphics; //untuk menggambar
+import java.awt.Image; //untuk menampung aset gambar
+import java.awt.Rectangle; //untuk collision detection
 
 public abstract class Entity {
     public int x; // Posisi x entity
@@ -18,7 +18,7 @@ public abstract class Entity {
     public int width; // Lebar entity
     public int height; // Tinggi entity
 
-    // PENTING: Atribut ini harus ada untuk menyimpan gambar yang sudah di-load
+    //untuk menyimpan gambar yang sudah di-load
     protected Image sprite;
 
     public Entity() {
@@ -37,12 +37,9 @@ public abstract class Entity {
         this.height = height;
     }
 
-    public abstract void update();
-    /* Method update (Abstract) */
+    public abstract void update(); //method abstrak untuk update logika entity jika entity dapat bergerak
 
-    // ==========================================
-    // BAGIAN INI YANG PALING PENTING DIUBAH
-    // ==========================================
+    /* Method update (Abstract) */
     public void render(Graphics g) {
         /*
          * Method render
@@ -51,20 +48,17 @@ public abstract class Entity {
          */
 
         if (sprite != null) {
-            // JIKA GAMBAR ADA: Gambar pakai image tersebut
-            // Parameter: gambar, posisi x, posisi y, lebar, tinggi, observer (null)
+            //jika gambar sudah ada, gambar sesuai posisi dan ukuran
             g.drawImage(sprite, x, y, width, height, null);
         } else {
-            // JIKA GAMBAR GAGAL LOAD/KOSONG: Gambar kotak sebagai cadangan
-            // Kita kasih warna abu-abu biar beda dengan merah default
+            //jika gambar belum ada, gambar kotak abu-abu sebagai placeholder
             g.setColor(Color.GRAY);
             g.fillRect(x, y, width, height);
 
-            // Kembalikan warna ke default (hitam) agar tidak mempengaruhi gambar lain
+            //kembalikan warna ke default (hitam) agar tidak mempengaruhi gambar lain
             g.setColor(Color.BLACK);
         }
     }
-    // ==========================================
 
     public Rectangle getBounds() {
         /* Method getBounds for collision */

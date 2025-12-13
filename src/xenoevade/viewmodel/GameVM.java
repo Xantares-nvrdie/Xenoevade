@@ -199,11 +199,8 @@ public class GameVM implements Runnable {
          */
         player.update();
         if (rand.nextInt(100) < 2) {
-            // spawn alien baru dengan probabilitas 2%
             int alienX = rand.nextInt(GAME_WIDTH - 50);
-            int alienY = -50; // Mulai dari atas layar (di luar layar)
-
-            // REVISI: Menggunakan class Alien
+            int alienY = -50;
             aliens.add(new Alien(alienX, alienY));
         }
 
@@ -211,18 +208,44 @@ public class GameVM implements Runnable {
         synchronized (aliens) {
             for (int i = 0; i < aliens.size(); i++) {
                 Entity a = aliens.get(i);
-
-                // Gunakan method update() milik entity masing-masing
                 a.update();
 
-                // alien menembak secara acak
-                if (rand.nextInt(100) < 1) {
-                    // REVISI: Menggunakan class Bullet (isPlayerBullet = false)
-                    alienBullets.add(new Bullet(a.x + (a.width / 2), a.y + a.height, false));
+                // Alien menembak secara acak
+                if (rand.nextInt(100) < 1) { // Probabilitas tembakan 1% per frame
+
+                    // 1. Tentukan titik tengah alien dan player
+                    double startX = a.x + (a.width / 2.0);
+                    double startY = a.y + a.height;
+                    double targetX = player.x + (player.width / 2.0);
+                    double targetY = player.y + (player.height / 2.0);
+
+                    // 2. Hitung sudut ke arah player (dalam radian)
+                    double angleToPlayer = Math.atan2(targetY - startY, targetX - startX);
+
+                    // 3. Konfigurasi batasan sudut (Cone of Fire)
+                    // Sudut 90 derajat (PI/2) adalah lurus ke bawah
+                    double centerAngle = Math.PI / 2;
+                    double maxSpread = Math.toRadians(45); // Batas kemiringan maksimal 45 derajat kiri/kanan
+
+                    // 4. Clamp (batasi) sudut agar tidak terlalu miring
+                    // Jika sudut < 45 derajat (terlalu kanan) atau > 135 derajat (terlalu kiri)
+                    if (angleToPlayer < centerAngle - maxSpread) {
+                        angleToPlayer = centerAngle - maxSpread;
+                    } else if (angleToPlayer > centerAngle + maxSpread) {
+                        angleToPlayer = centerAngle + maxSpread;
+                    }
+
+                    // 5. Hitung velocity vector berdasarkan sudut yang sudah dibatasi
+                    double bulletSpeed = 5.0; // Kecepatan peluru
+                    double velX = bulletSpeed * Math.cos(angleToPlayer);
+                    double velY = bulletSpeed * Math.sin(angleToPlayer);
+
+                    // Menambahkan peluru dengan vektor kecepatan khusus
+                    // Pastikan class Bullet memiliki konstruktor yang menerima (x, y, velX, velY,
+                    // isPlayer)
+                    alienBullets.add(new Bullet((int) startX, (int) startY, velX, velY, false));
                 }
 
-                // hapus alien jika lewat batas bawah (Y > Height)
-                // Note: Logika sebelumnya a.y < -30 sepertinya terbalik jika alien turun
                 if (a.y > GAME_HEIGHT)
                     aliens.remove(i--);
             }
@@ -242,13 +265,10 @@ public class GameVM implements Runnable {
         synchronized (alienBullets) {
             for (int i = 0; i < alienBullets.size(); i++) {
                 Entity b = alienBullets.get(i);
-                b.update(); // Gunakan update() dari class Bullet
+                b.update();
 
-                // Jika peluru alien lewat layar
-                if (b.y > GAME_HEIGHT) { // Logika diperbaiki: peluru alien ke bawah
-                    missed++; // tambah counter meleset
-
-                    // tiap 5 meleset, dapat 5 peluru
+                if (b.y > GAME_HEIGHT || b.x < 0 || b.x > GAME_WIDTH) {
+                    missed++;
                     if (missed % 5 == 0) {
                         ammo += 5;
                     }
@@ -344,8 +364,14 @@ public class GameVM implements Runnable {
          */
 
         if (ammo > 0) {
-            // REVISI: Menggunakan class Bullet (isPlayerBullet = true)
-            playerBullets.add(new Bullet(player.x + (player.width / 2) - 5, player.y, true));
+            // Hitung posisi X biar di tengah
+            int bulletX = player.x + (player.width / 2) - 5;
+            int bulletY = player.y;
+
+            // Velocity Player: X=0 (lurus), Y=-10 (naik)
+            // Pastikan parameter velocity dikirim sebagai double (-10.0)
+            playerBullets.add(new Bullet(bulletX, bulletY, 0, -10.0, true));
+
             ammo--;
         }
     }
