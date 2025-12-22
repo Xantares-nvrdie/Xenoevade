@@ -20,6 +20,9 @@ public class Player extends Entity {
     private Image imgLeft;
     private Image imgRight;
 
+    private int hp;
+    private final int MAX_HP = 100;
+
     public Player(int x, int y) {
         /*
          * Method Player
@@ -33,6 +36,8 @@ public class Player extends Entity {
 
         this.velX = 0;
         this.velY = 0;
+        this.hp = MAX_HP;
+
         loadAssets(); // memuat semua variasi gambar
     }
 
@@ -104,6 +109,29 @@ public class Player extends Entity {
             velX = -speed;
         if (right)
             velX = speed;
+    }
+    
+    public void takeDamage(int damage) {
+        /* Mengurangi HP player dan memastikan tidak negatif */
+        this.hp -= damage;
+        if (this.hp < 0) {
+            this.hp = 0;
+        }
+    }
+
+    public boolean isDead() {
+        /* Mengembalikan true jika HP habis */
+        return this.hp <= 0;
+    }
+
+    public int getHp() {
+        /* Getter untuk mengambil nilai HP saat ini */
+        return this.hp;
+    }
+
+    public int getMaxHp() {
+        /* Getter untuk nilai Max HP (berguna jika mau bikin Health Bar nanti) */
+        return MAX_HP;
     }
 
     // Setter untuk kontrol keyboard
