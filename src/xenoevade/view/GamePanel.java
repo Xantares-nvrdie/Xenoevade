@@ -3,32 +3,38 @@ Project: XenoEvade
 Filename: GamePanel.java
 Programmer: Bintang Fajar Putra Pamungkas
 Email: bintangfajarputra@upi.edu
-Description: Game Canvas View (Painting & Input) with Sprite Sheet HUD
+Description: Game Canvas View (Painting & Input) with Audio
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 package xenoevade.view;
 
-import xenoevade.model.Entity; //untuk ambil data posisi
-import xenoevade.viewmodel.GameVM; //otak permainan
-import javax.swing.*; //gui components
-import java.awt.*; //graphics painting
-import java.awt.event.KeyAdapter; //input keyboard
-import java.awt.event.KeyEvent; //kode tombol
-import java.awt.image.BufferedImage; // BARU: Butuh BufferedImage untuk slicing
-import java.beans.PropertyChangeEvent; //listener
-import java.beans.PropertyChangeListener; //listener interface
+import xenoevade.audio.AudioPlayer;
+import xenoevade.model.Entity;
+import xenoevade.viewmodel.GameVM;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.image.BufferedImage;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import javax.imageio.ImageIO;
+
 
 public class GamePanel extends JPanel implements PropertyChangeListener {
     private GameVM viewModel;
     private MainFrame mainFrame;
     private Image backgroundImage;
 
-    // BARU: Variabel terpisah untuk 3 kondisi hati
+    // Aset HUD
     private Image heartFullImg;
     private Image heartHalfImg;
     private Image heartEmptyImg;
 
-    // Flag input keyboard
+    // Atribut Audio Player
+    private AudioPlayer bgmPlayer; // Musik In-Game
+    private AudioPlayer gameOverPlayer; // Musik Game Over
+    private AudioPlayer shootPlayer;
+
     private boolean isUp = false;
     private boolean isDown = false;
     private boolean isLeft = false;
@@ -36,56 +42,59 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
 
     public GamePanel(MainFrame mainFrame, String username) {
         /* Method GamePanel */
+
         this.mainFrame = mainFrame;
         this.viewModel = new GameVM(username);
-
         this.viewModel.addPropertyChangeListener(this);
+
         this.setBackground(new Color(20, 2, 40));
         this.setFocusable(true);
 
-        loadAssets(); // Load background dan slice aset hati
+        loadAssets();
+        setupAudio();
         setupInput();
 
         this.viewModel.startGame();
     }
 
-    private void loadAssets() {
+    private void setupAudio() {
         /*
-         * Method loadAssets (Updated)
-         * Memuat background dan memotong sprite sheet hati
+         * Method setupAudio
+         * Inisialisasi musik latar dan musik game over
          */
+
+        // 1. Musik Gameplay
+        bgmPlayer = new AudioPlayer("bgm2.wav");
+        bgmPlayer.setVolume(0.0f); // Volume sedikit dikecilkan
+        bgmPlayer.loop(); // Mainkan terus menerus
+
+        // 2. Musik Game Over
+        gameOverPlayer = new AudioPlayer("die.wav");
+        gameOverPlayer.setVolume(0.0f);
+
+        shootPlayer = new AudioPlayer("shoot.wav");
+        shootPlayer.setVolume(0.0f); // Volume biasanya lebih kecil biar ga berisik
+    }
+
+    private void loadAssets() {
+        /* Method loadAssets */
         try {
-            // Load Background
             java.net.URL bgUrl = getClass().getResource("/assets/background.png");
-            if (bgUrl != null) {
+            if (bgUrl != null)
                 this.backgroundImage = ImageIO.read(bgUrl);
-            }
 
-            // --- BARU: LOGIKA SLICING SPRITE SHEET HATI ---
-            // Pastikan nama file sheet hati Anda benar (misal: hearts.png)
             java.net.URL heartSheetUrl = getClass().getResource("/assets/hearts.png");
-
             if (heartSheetUrl != null) {
-                // Baca sebagai BufferedImage agar bisa dipotong
                 BufferedImage sheet = ImageIO.read(heartSheetUrl);
+                int cellWidth = sheet.getWidth() / 3;
+                int cellHeight = sheet.getHeight();
 
-                // Asumsi sheet terdiri dari 3 gambar berjejer horizontal
-                int cellWidth = sheet.getWidth() / 3; // Lebar satu sel hati
-                int cellHeight = sheet.getHeight(); // Tinggi satu sel hati
-
-                // Potong gambar menggunakan getSubimage(x, y, width, height)
-                // Hati Penuh (Indeks 0)
                 heartFullImg = sheet.getSubimage(0, 0, cellWidth, cellHeight);
-                // Hati Setengah (Indeks 1 -> geser x sejauh 1 cellWidth)
                 heartHalfImg = sheet.getSubimage(cellWidth, 0, cellWidth, cellHeight);
-                // Hati Kosong (Indeks 2 -> geser x sejauh 2 cellWidth)
                 heartEmptyImg = sheet.getSubimage(cellWidth * 2, 0, cellWidth, cellHeight);
             }
-            // ----------------------------------------------
-
         } catch (Exception e) {
             System.err.println("Gagal memuat aset visual: " + e.getMessage());
-            e.printStackTrace(); // Print stack trace biar tau error detailnya
         }
     }
 
@@ -107,9 +116,9 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
 
                 if (k == KeyEvent.VK_SPACE)
                     viewModel.playerShoot();
+
                 if (k == KeyEvent.VK_ENTER) {
-                    viewModel.stopGame(true);
-                    mainFrame.showMenu();
+                    stopMusicAndExit();
                 }
             }
 
@@ -129,16 +138,49 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
         });
     }
 
+    private void stopMusicAndExit() {
+        /* Helper untuk stop semua musik sebelum ganti layar */
+        if (bgmPlayer != null)
+            bgmPlayer.stop();
+        if (gameOverPlayer != null)
+            gameOverPlayer.stop();
+
+        viewModel.stopGame(true);
+        mainFrame.showMenu();
+    }
+
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
-        /* Method propertyChange (Observer) */
         if ("render".equals(evt.getPropertyName())) {
             SwingUtilities.invokeLater(this::repaint);
+
         } else if ("gameOver".equals(evt.getPropertyName())) {
+
+            // --- LOGIKA MUSIK GAME OVER ---
+
+            // 1. Matikan musik gameplay
+            if (bgmPlayer != null)
+                bgmPlayer.stop();
+
+            // 2. Mainkan musik game over
+            if (gameOverPlayer != null) {
+                gameOverPlayer.play();
+            }
+
             SwingUtilities.invokeLater(() -> {
                 JOptionPane.showMessageDialog(this, "GAME OVER! Misi Gagal.");
+
+                // Matikan musik game over setelah user menekan OK di dialog
+                if (gameOverPlayer != null)
+                    gameOverPlayer.stop();
+
                 mainFrame.showMenu();
             });
+        } else if ("sfx_shoot".equals(evt.getPropertyName())) { // [BARU]
+            // Mainkan suara tembak
+            if (shootPlayer != null) {
+                shootPlayer.play();
+            }
         }
     }
 
@@ -147,7 +189,7 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
         /* Method paintComponent */
         super.paintComponent(g);
 
-        // 0. Gambar Background
+        // Render Background
         if (backgroundImage != null) {
             g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), null);
         } else {
@@ -155,7 +197,7 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
             g.fillRect(0, 0, getWidth(), getHeight());
         }
 
-        // RENDER ENTITAS GAME
+        // Render Entities
         Entity p = viewModel.getPlayer();
         if (p != null)
             p.render(g);
@@ -180,75 +222,53 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
                 ex.render(g);
         }
 
-        // 7. Gambar HUD (Heads-Up Display)
         drawHUD(g);
     }
 
     private void drawHUD(Graphics g) {
-        /*
-         * Method drawHUD (Updated for Heart Container Display)
-         * Menggambar deretan hati berdasarkan HP
-         */
+        /* Method drawHUD */
 
-        // --- TAMPILAN NYAWA (HEART CONTAINER) ---
         int hp = 0;
-        int maxHp = 100; // Default fallback
-
+        int maxHp = 100;
         if (viewModel.getPlayer() instanceof xenoevade.model.Player) {
             xenoevade.model.Player player = (xenoevade.model.Player) viewModel.getPlayer();
             hp = player.getHp();
             maxHp = player.getMaxHp();
         }
 
-        // Konfigurasi Tampilan Hati
-        int heartsTotal = maxHp / 20; // Asumsi 1 hati = 20 HP (Total 5 hati untuk 100HP)
-        int startX = 20; // Posisi X mulai menggambar
-        int startY = 20; // Posisi Y mulai menggambar
-        int heartSize = 30; // Ukuran gambar hati di layar
-        int padding = 5; // Jarak antar hati
+        int heartsTotal = maxHp / 20;
+        int startX = 20;
+        int startY = 20;
+        int heartSize = 30;
+        int padding = 5;
 
-        // Loop untuk menggambar setiap slot hati
         for (int i = 0; i < heartsTotal; i++) {
-            // Nilai HP di ambang batas hati ke-(i+1)
-            // Misal i=0 (hati pertama), threshold = 20. i=1 (hati kedua), threshold = 40.
             int heartThreshold = (i + 1) * 20;
-
-            // Tentukan gambar mana yang dipakai
             Image imgToDraw;
 
             if (hp >= heartThreshold) {
-                // Jika HP di atas ambang batas, gambar hati penuh
                 imgToDraw = heartFullImg;
             } else if (hp >= heartThreshold - 10) {
-                // Jika HP di antara setengah dan penuh (misal HP 30, threshold hati ke-2 adalah
-                // 40. 30 >= 40-10)
                 imgToDraw = heartHalfImg;
             } else {
-                // Sisanya kosong
                 imgToDraw = heartEmptyImg;
             }
 
-            // Hitung posisi X untuk hati saat ini
             int drawX = startX + (i * (heartSize + padding));
-
-            // Gambar hati (dengan fallback kotak merah jika gambar gagal load)
             if (imgToDraw != null) {
                 g.drawImage(imgToDraw, drawX, startY, heartSize, heartSize, null);
             } else {
                 g.setColor(Color.RED);
-                g.drawRect(drawX, startY, heartSize, heartSize); // Gambar kotak kosong sebagai penanda error
+                g.drawRect(drawX, startY, heartSize, heartSize);
             }
         }
-        // -------------------------------------------------------
 
-        // --- TAMPILAN SKOR (Pojok Kanan Atas) ---
         String scoreText = "SCORE: " + viewModel.getScore();
-        g.setFont(new Font("Monospaced", Font.BOLD, 18)); // Set font dulu untuk perhitungan width
+        g.setFont(new Font("Monospaced", Font.BOLD, 18));
         int scoreWidth = g.getFontMetrics().stringWidth(scoreText);
         g.setColor(Color.CYAN);
         g.drawString(scoreText, getWidth() - scoreWidth - 20, 40);
 
-        // --- TAMPILAN AMMO (Pojok Kanan Bawah) ---
         String ammoText = "AMMO: " + viewModel.getAmmo();
         g.setColor(Color.GREEN);
         g.drawString(ammoText, getWidth() - 150, getHeight() - 20);

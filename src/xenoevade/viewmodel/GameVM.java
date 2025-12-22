@@ -463,6 +463,7 @@ public class GameVM implements Runnable {
             playerBullets.add(new Bullet(bulletX, bulletY, 0, -10.0, true));
 
             ammo--;
+            support.firePropertyChange("sfx_shoot", null, null);
         }
     }
 
