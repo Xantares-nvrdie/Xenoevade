@@ -3,7 +3,7 @@ Project: XenoEvade
 Filename: GamePanel.java
 Programmer: Bintang Fajar Putra Pamungkas
 Email: bintangfajarputra@upi.edu
-Description: Game Canvas View (Painting & Input)
+Description: Game Canvas View (Painting & Input) with Sprite Sheet HUD
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 package xenoevade.view;
 
@@ -13,67 +13,88 @@ import javax.swing.*; //gui components
 import java.awt.*; //graphics painting
 import java.awt.event.KeyAdapter; //input keyboard
 import java.awt.event.KeyEvent; //kode tombol
+import java.awt.image.BufferedImage; // BARU: Butuh BufferedImage untuk slicing
 import java.beans.PropertyChangeEvent; //listener
 import java.beans.PropertyChangeListener; //listener interface
-import java.io.File;
 import javax.imageio.ImageIO;
 
 public class GamePanel extends JPanel implements PropertyChangeListener {
     private GameVM viewModel;
     private MainFrame mainFrame;
-    private Image backgroundImage; // Tambahan: Background Image
+    private Image backgroundImage;
 
+    // BARU: Variabel terpisah untuk 3 kondisi hati
+    private Image heartFullImg;
+    private Image heartHalfImg;
+    private Image heartEmptyImg;
 
+    // Flag input keyboard
     private boolean isUp = false;
     private boolean isDown = false;
     private boolean isLeft = false;
     private boolean isRight = false;
 
     public GamePanel(MainFrame mainFrame, String username) {
-        /*
-         * Method GamePanel
-         * Konstruktor untuk inisialisasi panel game
-         */
-
+        /* Method GamePanel */
         this.mainFrame = mainFrame;
         this.viewModel = new GameVM(username);
 
-        // mvvm binding untuk perubahan data
         this.viewModel.addPropertyChangeListener(this);
-
-        this.setBackground(new Color(20, 2, 40)); // Warna background cadangan
+        this.setBackground(new Color(20, 2, 40));
         this.setFocusable(true);
 
-        loadBackground(); // Load background image
+        loadAssets(); // Load background dan slice aset hati
         setupInput();
 
-        this.viewModel.startGame(); // memulai game
+        this.viewModel.startGame();
     }
 
-    private void loadBackground() {
+    private void loadAssets() {
+        /*
+         * Method loadAssets (Updated)
+         * Memuat background dan memotong sprite sheet hati
+         */
         try {
-            // Opsional: Jika punya background.png di assets
-            java.net.URL url = getClass().getResource("/assets/background.png");
-            if (url != null) {
-                this.backgroundImage = ImageIO.read(url);
+            // Load Background
+            java.net.URL bgUrl = getClass().getResource("/assets/background.png");
+            if (bgUrl != null) {
+                this.backgroundImage = ImageIO.read(bgUrl);
             }
+
+            // --- BARU: LOGIKA SLICING SPRITE SHEET HATI ---
+            // Pastikan nama file sheet hati Anda benar (misal: hearts.png)
+            java.net.URL heartSheetUrl = getClass().getResource("/assets/hearts.png");
+
+            if (heartSheetUrl != null) {
+                // Baca sebagai BufferedImage agar bisa dipotong
+                BufferedImage sheet = ImageIO.read(heartSheetUrl);
+
+                // Asumsi sheet terdiri dari 3 gambar berjejer horizontal
+                int cellWidth = sheet.getWidth() / 3; // Lebar satu sel hati
+                int cellHeight = sheet.getHeight(); // Tinggi satu sel hati
+
+                // Potong gambar menggunakan getSubimage(x, y, width, height)
+                // Hati Penuh (Indeks 0)
+                heartFullImg = sheet.getSubimage(0, 0, cellWidth, cellHeight);
+                // Hati Setengah (Indeks 1 -> geser x sejauh 1 cellWidth)
+                heartHalfImg = sheet.getSubimage(cellWidth, 0, cellWidth, cellHeight);
+                // Hati Kosong (Indeks 2 -> geser x sejauh 2 cellWidth)
+                heartEmptyImg = sheet.getSubimage(cellWidth * 2, 0, cellWidth, cellHeight);
+            }
+            // ----------------------------------------------
+
         } catch (Exception e) {
-            // Ignore error if no background
+            System.err.println("Gagal memuat aset visual: " + e.getMessage());
+            e.printStackTrace(); // Print stack trace biar tau error detailnya
         }
     }
 
     private void setupInput() {
-        /*
-         * Method setupInput
-         * Menggunakan logika boolean agar gerakan smooth tanpa delay OS
-         */
-
+        /* Method setupInput */
         this.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 int k = e.getKeyCode();
-
-                // Saat tombol DITEKAN, set flag jadi true
                 if (k == KeyEvent.VK_A)
                     isLeft = true;
                 if (k == KeyEvent.VK_D)
@@ -82,14 +103,10 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
                     isUp = true;
                 if (k == KeyEvent.VK_S)
                     isDown = true;
-
-                // Update ke ViewModel
                 viewModel.updatePlayerInput(isUp, isDown, isLeft, isRight);
 
-                // Aksi sekali tekan (seperti menembak) tetap di sini
                 if (k == KeyEvent.VK_SPACE)
                     viewModel.playerShoot();
-
                 if (k == KeyEvent.VK_ENTER) {
                     viewModel.stopGame(true);
                     mainFrame.showMenu();
@@ -99,8 +116,6 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
             @Override
             public void keyReleased(KeyEvent e) {
                 int k = e.getKeyCode();
-
-                // Saat tombol DILEPAS, set flag jadi false
                 if (k == KeyEvent.VK_A)
                     isLeft = false;
                 if (k == KeyEvent.VK_D)
@@ -109,8 +124,6 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
                     isUp = false;
                 if (k == KeyEvent.VK_S)
                     isDown = false;
-
-                // Update ke ViewModel agar player berhenti
                 viewModel.updatePlayerInput(isUp, isDown, isLeft, isRight);
             }
         });
@@ -118,18 +131,12 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
 
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
-        /*
-         * Method propertyChange (Observer)
-         * Dipanggil otomatis oleh GameVM saat ada update logika/render
-         */
-
+        /* Method propertyChange (Observer) */
         if ("render".equals(evt.getPropertyName())) {
-            // Gambar ulang layar (Thread Safe)
             SwingUtilities.invokeLater(this::repaint);
-        } else if ("gameOver".equals(evt.getPropertyName())) { // Perbaikan: case sensitive "gameOver"
-            // Tampilkan pesan game over
+        } else if ("gameOver".equals(evt.getPropertyName())) {
             SwingUtilities.invokeLater(() -> {
-                JOptionPane.showMessageDialog(this, "GAME OVER! Kamu tertembak.");
+                JOptionPane.showMessageDialog(this, "GAME OVER! Misi Gagal.");
                 mainFrame.showMenu();
             });
         }
@@ -137,57 +144,113 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
 
     @Override
     protected void paintComponent(Graphics g) {
-        /*
-         * Method paintComponent
-         * Menggambar semua objek berdasarkan data dari ViewModel
-         */
+        /* Method paintComponent */
+        super.paintComponent(g);
 
-        super.paintComponent(g); // bersihkan layar
-
-        // 0. Gambar Background (Jika ada)
+        // 0. Gambar Background
         if (backgroundImage != null) {
             g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), null);
+        } else {
+            g.setColor(new Color(20, 2, 40));
+            g.fillRect(0, 0, getWidth(), getHeight());
         }
 
-        // ============================================================
-        // PERBAIKAN DISINI: Panggil method .render(g) milik Entity!
-        // Jangan menggambar manual pakai fillRect/fillOval lagi.
-        // ============================================================
-
-        // 1. Gambar Player
-        // Tidak perlu g.setColor, karena gambar PNG punya warna sendiri
+        // RENDER ENTITAS GAME
         Entity p = viewModel.getPlayer();
-        p.render(g); // <--- INI KUNCINYA
+        if (p != null)
+            p.render(g);
 
-        // 2. Gambar Aliens
-        for (Entity a : viewModel.getAliens()) {
-            a.render(g); // Biarkan Alien menggambar dirinya sendiri
+        synchronized (viewModel.getAliens()) {
+            for (Entity a : viewModel.getAliens())
+                a.render(g);
         }
-
-        // 3. Gambar Batu/Obstacle
         for (Entity o : viewModel.getObstacles()) {
             o.render(g);
         }
-
-        // 4. Gambar Peluru Player
-        for (Entity b : viewModel.getPlayerBullets()) {
-            b.render(g);
+        synchronized (viewModel.getPlayerBullets()) {
+            for (Entity b : viewModel.getPlayerBullets())
+                b.render(g);
+        }
+        synchronized (viewModel.getAlienBullets()) {
+            for (Entity b : viewModel.getAlienBullets())
+                b.render(g);
+        }
+        synchronized (viewModel.getExplosions()) {
+            for (Entity ex : viewModel.getExplosions())
+                ex.render(g);
         }
 
-        // 5. Gambar Peluru Alien
-        for (Entity b : viewModel.getAlienBullets()) {
-            b.render(g);
-        }
-        for (Entity ex : viewModel.getExplosions()) {
-            ex.render(g); // Render frame animasi saat ini
+        // 7. Gambar HUD (Heads-Up Display)
+        drawHUD(g);
+    }
+
+    private void drawHUD(Graphics g) {
+        /*
+         * Method drawHUD (Updated for Heart Container Display)
+         * Menggambar deretan hati berdasarkan HP
+         */
+
+        // --- TAMPILAN NYAWA (HEART CONTAINER) ---
+        int hp = 0;
+        int maxHp = 100; // Default fallback
+
+        if (viewModel.getPlayer() instanceof xenoevade.model.Player) {
+            xenoevade.model.Player player = (xenoevade.model.Player) viewModel.getPlayer();
+            hp = player.getHp();
+            maxHp = player.getMaxHp();
         }
 
-        // 6. Gambar HUD (Skor & Status)
-        g.setColor(Color.WHITE); // Kembalikan warna putih untuk teks
-        g.setFont(new Font("Arial", Font.BOLD, 14));
-        g.drawString("Score: " + viewModel.getScore(), 20, 30);
-        g.drawString("Ammo: " + viewModel.getAmmo(), 20, 50);
-        g.drawString("Missed: " + viewModel.getMissed(), 20, 70);
-        g.drawString("[Space] to Quit", 650, 30);
+        // Konfigurasi Tampilan Hati
+        int heartsTotal = maxHp / 20; // Asumsi 1 hati = 20 HP (Total 5 hati untuk 100HP)
+        int startX = 20; // Posisi X mulai menggambar
+        int startY = 20; // Posisi Y mulai menggambar
+        int heartSize = 30; // Ukuran gambar hati di layar
+        int padding = 5; // Jarak antar hati
+
+        // Loop untuk menggambar setiap slot hati
+        for (int i = 0; i < heartsTotal; i++) {
+            // Nilai HP di ambang batas hati ke-(i+1)
+            // Misal i=0 (hati pertama), threshold = 20. i=1 (hati kedua), threshold = 40.
+            int heartThreshold = (i + 1) * 20;
+
+            // Tentukan gambar mana yang dipakai
+            Image imgToDraw;
+
+            if (hp >= heartThreshold) {
+                // Jika HP di atas ambang batas, gambar hati penuh
+                imgToDraw = heartFullImg;
+            } else if (hp >= heartThreshold - 10) {
+                // Jika HP di antara setengah dan penuh (misal HP 30, threshold hati ke-2 adalah
+                // 40. 30 >= 40-10)
+                imgToDraw = heartHalfImg;
+            } else {
+                // Sisanya kosong
+                imgToDraw = heartEmptyImg;
+            }
+
+            // Hitung posisi X untuk hati saat ini
+            int drawX = startX + (i * (heartSize + padding));
+
+            // Gambar hati (dengan fallback kotak merah jika gambar gagal load)
+            if (imgToDraw != null) {
+                g.drawImage(imgToDraw, drawX, startY, heartSize, heartSize, null);
+            } else {
+                g.setColor(Color.RED);
+                g.drawRect(drawX, startY, heartSize, heartSize); // Gambar kotak kosong sebagai penanda error
+            }
+        }
+        // -------------------------------------------------------
+
+        // --- TAMPILAN SKOR (Pojok Kanan Atas) ---
+        String scoreText = "SCORE: " + viewModel.getScore();
+        g.setFont(new Font("Monospaced", Font.BOLD, 18)); // Set font dulu untuk perhitungan width
+        int scoreWidth = g.getFontMetrics().stringWidth(scoreText);
+        g.setColor(Color.CYAN);
+        g.drawString(scoreText, getWidth() - scoreWidth - 20, 40);
+
+        // --- TAMPILAN AMMO (Pojok Kanan Bawah) ---
+        String ammoText = "AMMO: " + viewModel.getAmmo();
+        g.setColor(Color.GREEN);
+        g.drawString(ammoText, getWidth() - 150, getHeight() - 20);
     }
 }
