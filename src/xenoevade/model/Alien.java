@@ -31,12 +31,12 @@ public class Alien extends Entity {
 
         // Coba 1: Menggunakan getResource (Standard)
         java.net.URL url = getClass().getResource("/assets/player.png");
-        System.out.println("Mencari via Classpath (/assets/player.png): " + url);
+        
 
         if (url != null) {
             try {
                 this.sprite = ImageIO.read(url);
-                System.out.println("-> SUKSES load via Classpath!");
+                
                 return;
             } catch (Exception e) {
                 System.err.println("-> GAGAL baca file classpath: " + e.getMessage());
@@ -45,12 +45,11 @@ public class Alien extends Entity {
 
         // Coba 2: Menggunakan File Langsung (Jurus Darurat untuk Localhost)
         // Ini mencari langsung ke folder src di macbook anda
-        System.out.println("Mencari via Direct File (src/assets/player.png)...");
         try {
             java.io.File file = new java.io.File("src/assets/player.png");
             if (file.exists()) {
                 this.sprite = ImageIO.read(file);
-                System.out.println("-> SUKSES load via Direct File!");
+                
             } else {
                 System.out.println("-> GAGAL: File tidak ditemukan di path: " + file.getAbsolutePath());
             }
