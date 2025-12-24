@@ -89,7 +89,7 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
         gameOverPlayer = new AudioPlayer("die.wav");
         gameOverPlayer.setVolume(0.0f);
 
-        //w inisialisasi sfx tembakan
+        // inisialisasi sfx tembakan
         shootPlayer = new AudioPlayer("shoot.wav");
         shootPlayer.setVolume(0.0f);
     }
@@ -251,8 +251,11 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
 
         // ambil objek player dan gambar
         Entity p = viewModel.getPlayer();
-        if (p != null)
+
+        // gunakan method render
+        if (p != null) {
             p.render(g);
+        }
 
         // render list entitas dengan sinkronisasi thread
         synchronized (viewModel.getAliens()) {
@@ -260,9 +263,11 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
                 a.render(g);
         }
 
-        // render obstacle (tidak perlu synchronized karena list statis)
-        for (Entity o : viewModel.getObstacles()) {
-            o.render(g);
+        // render obstacle
+        synchronized (viewModel.getObstacles()) {
+            for (Entity o : viewModel.getObstacles()) {
+                o.render(g);
+            }
         }
 
         // render peluru player
@@ -293,15 +298,8 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
          * menggambar ui di atas layer game (score, ammo, health)
          */
 
-        int hp = 0;
-        int maxHp = 100;
-
-        // ambil data hp dari player
-        if (viewModel.getPlayer() instanceof xenoevade.model.Player) {
-            xenoevade.model.Player player = (xenoevade.model.Player) viewModel.getPlayer();
-            hp = player.getHp();
-            maxHp = player.getMaxHp();
-        }
+        int hp = viewModel.getPlayerHp();
+        int maxHp = viewModel.getPlayerMaxHp();
 
         // konfigurasi posisi awal icon hati
         int heartsTotal = maxHp / 20;

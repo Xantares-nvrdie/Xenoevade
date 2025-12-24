@@ -11,6 +11,9 @@ import java.awt.Image; //untuk variabel penampung gambar
 import java.awt.image.BufferedImage; //untuk manipulasi gambar
 import java.net.URL; //untuk URL resource
 import javax.imageio.ImageIO; //untuk membaca file gambar
+import java.awt.Graphics; //untuk menggambar
+import java.awt.Color; //untuk warna fallback
+
 
 public class Explosion extends Entity {
     // konstanta konfigurasi animasi
@@ -24,6 +27,14 @@ public class Explosion extends Entity {
     private int currentFrameIndex;
     private int tickCounter;
     private boolean finished;
+
+    public Explosion() {
+        /*
+         * Method Explosion
+         * konstruktor default (posisi 0,0)
+         */
+        this(0, 0);
+    }
 
     public Explosion(int x, int y) {
         /*
@@ -95,6 +106,21 @@ public class Explosion extends Entity {
                 // update gambar sprite ke frame selanjutnya
                 this.sprite = animationFrames[currentFrameIndex];
             }
+        }
+    }
+
+    @Override
+    public void render(Graphics g) {
+        /*
+         * Method render
+         * Menampilkan efek visual ledakan
+         */
+        if (sprite != null) {
+            g.drawImage(sprite, x, y, width, height, null);
+        } else {
+            // Fallback visual warna oranye untuk ledakan
+            g.setColor(Color.ORANGE);
+            g.fillOval(x, y, width, height);
         }
     }
 

@@ -7,8 +7,7 @@ Description: Abstract class to represent game objects (Player, Alien, etc)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 package xenoevade.model;
 
-import java.awt.Color; //untuk warna fallback
-import java.awt.Graphics; //untuk menggambar
+import java.awt.Graphics;//untuk menggambar
 import java.awt.Image; //untuk menampung aset gambar
 import java.awt.Rectangle; //untuk collision detection
 
@@ -36,32 +35,31 @@ public abstract class Entity {
         this.width = width;
         this.height = height;
     }
+    
+    // method abstrak untuk update logika entity jika entity dapat bergerak
+    public abstract void update(); 
 
-    public abstract void update(); //method abstrak untuk update logika entity jika entity dapat bergerak
-
-    /* Method update (Abstract) */
-    public void render(Graphics g) {
-        /*
-         * Method render
-         * Tugasnya: Menggambar entity ke layar.
-         * Logika: Cek dulu apakah 'sprite' (gambar) sudah ada isinya?
-         */
-
-        if (sprite != null) {
-            //jika gambar sudah ada, gambar sesuai posisi dan ukuran
-            g.drawImage(sprite, x, y, width, height, null);
-        } else {
-            //jika gambar belum ada, gambar kotak abu-abu sebagai placeholder
-            g.setColor(Color.GRAY);
-            g.fillRect(x, y, width, height);
-
-            //kembalikan warna ke default (hitam) agar tidak mempengaruhi gambar lain
-            g.setColor(Color.BLACK);
-        }
-    }
-
+    // method abstrak untuk menggambar entity
+    public abstract void render(Graphics g);
+    
     public Rectangle getBounds() {
         /* Method getBounds for collision */
         return new Rectangle(x, y, width, height);
+    }
+
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public java.awt.Image getImage() {
+        /*
+         * Method getImage
+         * Mengembalikan sprite sebagai Image generic agar kompatibel
+         */
+        return sprite;
     }
 }

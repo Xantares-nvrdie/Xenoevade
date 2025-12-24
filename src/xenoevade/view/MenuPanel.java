@@ -7,7 +7,7 @@ Description: Main Menu View with Dark Overlay for Visibility
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 package xenoevade.view;
 
-import xenoevade.model.DB; //untuk koneksi database
+import xenoevade.model.TabelPengguna; //untuk model data tabel
 
 import java.awt.BorderLayout; //untuk layout border
 import java.awt.Color; //untuk warna
@@ -18,12 +18,11 @@ import java.awt.Font; //untuk font
 import java.awt.Graphics; //untuk menggambar
 import java.awt.Graphics2D; //untuk grafis 2D
 import java.awt.GridBagLayout; //untuk layout gridbag
+import java.awt.GridLayout; //untuk layout grid
 import java.awt.Image; //untuk gambar
 import java.awt.RenderingHints; //untuk rendering grafis
 import java.io.IOException; //untuk penanganan IO Exception
 import java.net.URL; //untuk URL resource
-import java.sql.ResultSet; //untuk menampung hasil query
-import java.util.Vector; //untuk menampung data tabel
 
 import javax.imageio.ImageIO; //untuk membaca file gambar
 import javax.swing.BorderFactory; //untuk border
@@ -31,6 +30,7 @@ import javax.swing.JButton; //untuk tombol
 import javax.swing.JLabel; //untuk label 
 import javax.swing.JOptionPane; //untuk dialog pesan
 import javax.swing.JPanel; //untuk panel
+import javax.swing.JScrollBar; //untuk scroll bar
 import javax.swing.JScrollPane; //untuk scroll pane
 import javax.swing.JTable; //untuk tabel
 import javax.swing.JTextField; //untuk input teks
@@ -45,6 +45,7 @@ public class MenuPanel extends JPanel {
 
     // konstanta warna ui
     private final Color COLOR_NEON_GREEN = new Color(100, 255, 100);
+    private final Color COLOR_NEON_RED = new Color(255, 80, 80);
     private final Color COLOR_TRANSPARENT_BLACK = new Color(0, 0, 0, 200);
     private final Color COLOR_TEXT_WHITE = Color.WHITE;
 
@@ -95,6 +96,10 @@ public class MenuPanel extends JPanel {
         lblTitle.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
         container.add(lblTitle, BorderLayout.NORTH);
 
+        // panel tengah untuk tabel dan tombol scroll
+        JPanel centerPanel = new JPanel(new BorderLayout(10, 0));
+        centerPanel.setOpaque(false);
+
         // tambahkan tabel leaderboard
         JTable tabel = new JTable(getTableData());
         styleTable(tabel);
@@ -103,7 +108,38 @@ public class MenuPanel extends JPanel {
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        container.add(scrollPane, BorderLayout.CENTER);
+
+        // sembunyikan scrollbar bawaan tapi tetap bisa di-scroll mouse
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+
+        centerPanel.add(scrollPane, BorderLayout.CENTER);
+
+        // panel tombol navigasi scroll
+        JPanel scrollButtons = new JPanel(new GridLayout(2, 1, 0, 10));
+        scrollButtons.setOpaque(false);
+
+        JButton btnUp = new JButton("▲");
+        JButton btnDown = new JButton("▼");
+
+        styleButton(btnUp, COLOR_NEON_GREEN);
+        styleButton(btnDown, COLOR_NEON_GREEN);
+
+        // logika tombol scroll
+        JScrollBar vsb = scrollPane.getVerticalScrollBar();
+
+        btnUp.addActionListener(e -> {
+            vsb.setValue(vsb.getValue() - 50);
+        });
+
+        btnDown.addActionListener(e -> {
+            vsb.setValue(vsb.getValue() + 50);
+        });
+
+        scrollButtons.add(btnUp);
+        scrollButtons.add(btnDown);
+
+        centerPanel.add(scrollButtons, BorderLayout.EAST);
+        container.add(centerPanel, BorderLayout.CENTER);
 
         // tambahkan panel input user di bawah
         container.add(createInputPanel(), BorderLayout.SOUTH);
@@ -132,7 +168,7 @@ public class MenuPanel extends JPanel {
         };
 
         container.setOpaque(false);
-        container.setPreferredSize(new Dimension(700, 500));
+        container.setPreferredSize(new Dimension(750, 500));
         container.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         return container;
@@ -151,17 +187,20 @@ public class MenuPanel extends JPanel {
         lblUser.setForeground(COLOR_TEXT_WHITE);
         lblUser.setFont(new Font("SansSerif", Font.PLAIN, 16));
 
-        JTextField txtUser = new JTextField(15);
+        JTextField txtUser = new JTextField(12);
         txtUser.setFont(new Font("SansSerif", Font.PLAIN, 14));
         txtUser.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(COLOR_NEON_GREEN, 1),
-                BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+        BorderFactory.createLineBorder(COLOR_NEON_GREEN, 1),
+        BorderFactory.createEmptyBorder(5, 5, 5, 5)));
         txtUser.setBackground(new Color(20, 20, 20));
         txtUser.setForeground(COLOR_TEXT_WHITE);
         txtUser.setCaretColor(COLOR_TEXT_WHITE);
 
-        JButton btnPlay = new JButton("START MISSION");
-        styleButton(btnPlay);
+        JButton btnPlay = new JButton("START");
+        styleButton(btnPlay, COLOR_NEON_GREEN);
+
+        JButton btnQuit = new JButton("QUIT");
+        styleButton(btnQuit, COLOR_NEON_RED);
 
         // event listener tombol play
         btnPlay.addActionListener(e -> {
@@ -174,9 +213,19 @@ public class MenuPanel extends JPanel {
             }
         });
 
+        // event listener tombol quit
+        btnQuit.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(this, "Keluar dari game?", "Konfirmasi",
+                    JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) {
+                System.exit(0);
+            }
+        });
+
         bottomPanel.add(lblUser);
         bottomPanel.add(txtUser);
         bottomPanel.add(btnPlay);
+        bottomPanel.add(btnQuit);
 
         return bottomPanel;
     }
@@ -203,15 +252,17 @@ public class MenuPanel extends JPanel {
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, COLOR_NEON_GREEN));
     }
 
-    private void styleButton(JButton btn) {
+    private void styleButton(JButton btn, Color c) {
         /*
          * Method styleButton
          * helper untuk styling tombol ala game
          */
 
         btn.setFont(new Font("Monospaced", Font.BOLD, 16));
-        btn.setBackground(COLOR_NEON_GREEN);
-        btn.setForeground(Color.GREEN); // text warna hijau tua/default tombol swing kadang menimpa
+        btn.setBackground(c);
+        btn.setForeground(Color.BLACK);
+        btn.setOpaque(true);
+        btn.setContentAreaFilled(true);
         btn.setFocusPainted(false);
         btn.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -232,45 +283,10 @@ public class MenuPanel extends JPanel {
     private DefaultTableModel getTableData() {
         /*
          * Method getTableData
-         * mengambil data top 10 skor dari database
+         * mengambil data top skor dari model tabel pengguna
          */
 
-        // membuat header tabel
-        Vector<String> columns = new Vector<>();
-        columns.add("PLAYER");
-        columns.add("SCORE");
-        columns.add("MISSED");
-        columns.add("AMMO");
-
-        Vector<Vector<Object>> data = new Vector<>();
-
-        try {
-            DB db = new DB();
-            String q = "SELECT * FROM tbenefit ORDER BY skor DESC LIMIT 10";
-            db.createQuery(q);
-            ResultSet rs = db.getRS();
-
-            // ambil data dari resultset
-            while (rs.next()) {
-                Vector<Object> row = new Vector<>();
-                row.add(rs.getString("username"));
-                row.add(rs.getInt("skor"));
-                row.add(rs.getInt("peluru_meleset"));
-                row.add(rs.getInt("sisa_peluru"));
-                data.add(row);
-            }
-            db.closeResultSet();
-            db.closeConnection();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        // mengembalikan model tabel yang tidak bisa diedit cell-nya
-        return new DefaultTableModel(data, columns) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
+        TabelPengguna tp = new TabelPengguna();
+        return tp.getLeaderboardData();
     }
 }

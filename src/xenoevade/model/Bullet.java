@@ -10,8 +10,11 @@ package xenoevade.model;
 import javax.imageio.ImageIO; // Untuk membaca file gambar
 import java.io.IOException; // Untuk penanganan IO Exception
 import java.net.URL; // Untuk URL resource
+import java.awt.Graphics; // Untuk menggambar
+import java.awt.Color; // Untuk warna fallback
 
 public class Bullet extends Entity {
+    // Tipe peluru: true = peluru pemain, false = peluru alien
     private boolean isPlayerBullet;
 
     // Kecepatan vektor
@@ -21,6 +24,14 @@ public class Bullet extends Entity {
     // Koordinat presisi tinggi untuk kalkulasi pergerakan halus
     private double preciseX;
     private double preciseY;
+
+    public Bullet() {
+        /*
+         * Method Bullet
+         * Konstruktor default (posisi 0,0, peluru pemain)
+         */
+        this(0, 0, 0.0, -10.0, true);
+    }
 
     public Bullet(int x, int y, double velX, double velY, boolean isPlayer) {
         /*
@@ -35,7 +46,7 @@ public class Bullet extends Entity {
         this.preciseX = x;
         this.preciseY = y;
 
-        // Inisialisasi properti fisika
+        // Inisialisasi properti
         this.velX = velX;
         this.velY = velY;
         this.isPlayerBullet = isPlayer;
@@ -99,5 +110,20 @@ public class Bullet extends Entity {
 
     public boolean isPlayerBullet() {
         return isPlayerBullet;
+    }
+    
+    @Override
+    public void render(Graphics g) {
+        /*
+         * Method render
+         * Menampilkan visual peluru
+         */
+        if (sprite != null) {
+            g.drawImage(sprite, x, y, width, height, null);
+        } else {
+            // Visual fallback sederhana
+            g.setColor(Color.YELLOW);
+            g.fillOval(x, y, width, height);
+        }
     }
 }
