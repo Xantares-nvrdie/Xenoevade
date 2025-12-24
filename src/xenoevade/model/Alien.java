@@ -7,7 +7,8 @@ Description: Class to represent enemy aliens
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 package xenoevade.model;
 
-import javax.imageio.ImageIO;
+import javax.imageio.ImageIO; //untuk membaca file gambar
+import java.net.URL; //untuk URL resource
 
 public class Alien extends Entity {
     private int speed; // kecepatan gerak alien
@@ -19,44 +20,34 @@ public class Alien extends Entity {
          * Menerima masukan posisi awal x dan y
          */
 
-        // Sesuaikan 50, 50 dengan ukuran asli gambar alien.png
+        // Inisialisasi posisi dan ukuran (50x50 px)
         super(x, y, 50, 50);
         this.speed = 2; // Alien bergerak turun dengan kecepatan 2
         loadAsset();
     }
 
     private void loadAsset() {
-        /* Method loadAsset dengan DEBUGGING */
-        System.out.println("=== DEBUGGING PLAYER ASSET ===");
-
-        // Coba 1: Menggunakan getResource (Standard)
-        java.net.URL url = getClass().getResource("/assets/player.png");
-        
-
-        if (url != null) {
-            try {
-                this.sprite = ImageIO.read(url);
-                
-                return;
-            } catch (Exception e) {
-                System.err.println("-> GAGAL baca file classpath: " + e.getMessage());
-            }
-        }
-
-        // Coba 2: Menggunakan File Langsung (Jurus Darurat untuk Localhost)
-        // Ini mencari langsung ke folder src di macbook anda
+        /*
+         * Method loadAsset
+         * Memuat gambar sprite alien dari resources
+         */
         try {
-            java.io.File file = new java.io.File("src/assets/player.png");
-            if (file.exists()) {
-                this.sprite = ImageIO.read(file);
-                
-            } else {
-                System.out.println("-> GAGAL: File tidak ditemukan di path: " + file.getAbsolutePath());
+            // Mengambil resource dari classpath (Kompatibel dengan JAR)
+            // Pastikan file 'alien.png' ada di folder assets
+            URL url = getClass().getResource("/assets/alien.png");
+
+            if (url == null) {
+                // Jika tidak ditemukan, tampilkan pesan error
+                System.err.println("Asset tidak ditemukan: /assets/alien.png");
+                return;
             }
+            // Membaca gambar dari URL resource
+            this.sprite = ImageIO.read(url);
+
         } catch (Exception e) {
-            System.err.println("-> Error baca file direct: " + e.getMessage());
+            // Menangani error saat memuat gambar
+            System.err.println("Gagal memuat aset alien: " + e.getMessage());
         }
-        System.out.println("===============================");
     }
 
     @Override
@@ -65,7 +56,6 @@ public class Alien extends Entity {
          * Method update
          * Logika pergerakan alien (otomatis turun ke bawah)
          */
-
         y += speed;
     }
 }

@@ -7,17 +7,20 @@ Description: Utility class to handle audio playback (Polyphonic Support)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 package xenoevade.audio;
 
-import javax.sound.sampled.*;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import javax.sound.sampled.AudioInputStream; //untuk input audio
+import javax.sound.sampled.AudioSystem; //untuk sistem audio
+import javax.sound.sampled.Clip; //untuk klip audio
+import javax.sound.sampled.AudioFormat; //untuk format audio
+import javax.sound.sampled.DataLine; //untuk data line audio
+import javax.sound.sampled.FloatControl; //untuk kontrol volume
+import java.net.URL; //untuk URL resource
+import java.util.ArrayList; //untuk list
+import java.util.List; //untuk list
 
 public class AudioPlayer {
-    // Kita gunakan List of Clips untuk menangani suara tumpang tindih (Pooling)
-    private List<Clip> clips;
-    private int currentClipIndex = 0;
-    private FloatControl gainControl;
-    private float lastVolume = 0.0f; // Simpan volume terakhir
+    // gunakan List of Clips untuk menangani suara tumpang tindih (Pooling)
+    private List<Clip> clips; // daftar klip audio
+    private int currentClipIndex = 0; // indeks klip saat ini untuk diputar
 
     public AudioPlayer(String filename) {
         /*
@@ -43,7 +46,7 @@ public class AudioPlayer {
             originalStream.read(audioData, 0, size);
 
             // Buat 20 duplikat Clip (Sound Pool) untuk setiap file audio
-            // Ini memungkinkan 20 suara yang sama bunyi bebarengan
+            // Ini memungkinkan 20 suara yang sama bunyi berbarengan
             int poolSize = 20;
             for (int i = 0; i < poolSize; i++) {
                 Clip clip = (Clip) AudioSystem.getLine(info);
@@ -53,6 +56,7 @@ public class AudioPlayer {
             }
 
         } catch (Exception e) {
+            // Gagal memuat audio
             System.err.println("Audio initialization failed: " + e.getMessage());
         }
     }
@@ -118,16 +122,16 @@ public class AudioPlayer {
         if (clips.isEmpty())
             return;
 
-        this.lastVolume = value;
-
         for (Clip c : clips) {
             try {
+                // Cek apakah kontrol volume didukung
                 if (c.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+                    // Dapatkan kontrol volume
                     FloatControl gainControl = (FloatControl) c.getControl(FloatControl.Type.MASTER_GAIN);
                     gainControl.setValue(value);
                 }
             } catch (Exception e) {
-                // Ignore errors on specific hardware
+                // Abaikan jika kontrol volume tidak didukung
             }
         }
     }

@@ -24,82 +24,84 @@ import java.util.List; //interface list
 import java.util.Random; //untuk random posisi alien dan obstacle
 
 public class GameVM implements Runnable {
-    // atribut untuk observer pattern
-    private PropertyChangeSupport support; // atribut untuk mengirim sinyal ke view
+    // atribut observer pattern
+    private PropertyChangeSupport support;
 
     // atribut database
-    private DB db; // atribut koneksi database
+    private DB db;
     private String username;
 
-    // atribut thread game
-    private boolean isRunning; // atribut status game berjalan
-    private Thread gameThread; // atribut thread game
+    // atribut threading
+    private boolean isRunning;
+    private Thread gameThread;
 
-    // atribut skor dan status game
-    private int score = 0; // atribut skor pemain
-    private int missed = 0; // atribut jumlah peluru alien yang meleset
-    private int ammo = 0; // atribut jumlah peluru pemain
+    // atribut game state
+    private int score = 0;
+    private int missed = 0;
+    private int ammo = 0;
 
-    // atribut objek game
-    private Player player; // atribut objek player
-    private List<Entity> aliens; // atribut list objek alien
-    private List<Entity> obstacles; // atribut list objek obstacle
-    private List<Entity> playerBullets; // atribut list peluru pemain
-    private List<Entity> alienBullets; // atribut list peluru alien
-    private List<Entity> explosions; // atribut list ledakan
+    // atribut entities
+    private Player player;
+    private List<Entity> aliens;
+    private List<Entity> obstacles;
+    private List<Entity> playerBullets;
+    private List<Entity> alienBullets;
+    private List<Entity> explosions;
 
-    // atribut ukuran area game
-    private final int GAME_WIDTH = 800; // lebar area game
-    private final int GAME_HEIGHT = 600; // tinggi area game
+    // konstanta area game
+    private final int GAME_WIDTH = 800;
+    private final int GAME_HEIGHT = 600;
 
     public GameVM(String username) {
         /*
          * Method GameVM
-         * Konstruktor untuk inisialisasi atribut game
-         * Menerima masukan berupa username pemain
+         * konstruktor untuk inisialisasi atribut game
          */
 
         this.username = username;
         this.support = new PropertyChangeSupport(this);
 
-        // inisialisasi list dengan sinkronisasi agar thread-safe
+        // menggunakan synchronizedList agar aman diakses dari multiple thread
         aliens = Collections.synchronizedList(new ArrayList<>());
         playerBullets = Collections.synchronizedList(new ArrayList<>());
         alienBullets = Collections.synchronizedList(new ArrayList<>());
-        obstacles = new ArrayList<>(); // obstacle statis jadi arraylist biasa cukup
         explosions = Collections.synchronizedList(new ArrayList<>());
 
-        // load data player dari database
-        loadPlayerData();
+        // obstacle statis tidak perlu sinkronisasi karena tidak berubah jumlahnya saat
+        // gameplay
+        obstacles = new ArrayList<>();
 
-        initEntities(); // inisialisasi entitas game
+        loadPlayerData();
+        initEntities();
     }
 
     public void loadPlayerData() {
         /*
          * Method loadPlayerData
-         * Method untuk memuat data pemain dari database
+         * memuat data pemain dari database mysql
          */
 
         try {
-            db = new DB(); // membuat koneksi database
+            // buka koneksi database
+            db = new DB();
             String query = "SELECT * FROM tbenefit WHERE username = '" + username + "';";
-            db.createQuery(query); // mengeksekusi query
-            ResultSet rs = db.getRS(); // mengambil hasil query
+            db.createQuery(query);
+            ResultSet rs = db.getRS();
 
             if (rs.next()) {
-                // jika pemain sudah ada di database, muat data
+                // jika user ditemukan, ambil data sisa peluru terakhir
                 this.ammo = rs.getInt("sisa_peluru");
             } else {
-                // jika pemain baru, masukkan data default ke database
-                db.closeResultSet(); // tutup resultset sebelumnya
+                // jika user tidak ditemukan, buat record baru dengan nilai default
+                db.closeResultSet();
                 String insertQuery = "INSERT INTO tbenefit (username, skor, peluru_meleset, sisa_peluru) VALUES ('"
                         + username + "', 0, 0, 0);";
-                db.createUpdate(insertQuery); // mengeksekusi insert
-                this.ammo = 0; // inisialisasi peluru pemain
+                db.createUpdate(insertQuery);
+                this.ammo = 0;
             }
-            db.closeResultSet(); // tutup resultset
-            db.closeConnection(); // tutup koneksi database
+            // tutup koneksi agar tidak memory leak
+            db.closeResultSet();
+            db.closeConnection();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -108,15 +110,16 @@ public class GameVM implements Runnable {
     private void initEntities() {
         /*
          * Method initEntities
-         * Method untuk inisialisasi player dan obstacle (batu) secara acak
+         * inisialisasi posisi awal player dan obstacle lingkungan
          */
 
+        // letakkan player di tengah bawah layar
         player = new Player(GAME_WIDTH / 2 - 32, GAME_HEIGHT - 100);
 
         Random rand = new Random();
         for (int i = 0; i < 5; i++) {
-            // menambahkan 5 obstacle secara acak
-            // spawn area disesuaikan agar tidak menimpa spawn point player
+            // generate koordinat acak untuk obstacle
+            // dibatasi agar tidak menimpa posisi spawn player
             int obsX = rand.nextInt(GAME_WIDTH - 50);
             int obsY = rand.nextInt(GAME_HEIGHT - 300) + 50;
 
@@ -127,18 +130,18 @@ public class GameVM implements Runnable {
     public void startGame() {
         /*
          * Method startGame
-         * Method untuk memulai thread game
+         * memulai thread utama untuk game loop
          */
 
         isRunning = true;
         gameThread = new Thread(this);
-        gameThread.start();
+        gameThread.start(); // memanggil method run()
     }
 
     public void stopGame(boolean save) {
         /*
          * Method stopGame
-         * Method untuk menghentikan thread game
+         * menghentikan game loop dan opsi menyimpan data
          */
 
         isRunning = false;
@@ -150,21 +153,21 @@ public class GameVM implements Runnable {
     private void saveDataToDB() {
         /*
          * Method saveDataToDB
-         * Method untuk menyimpan data pemain ke database
+         * menyimpan progress skor, missed, dan ammo ke database
          */
 
         try {
-            db = new DB(); // membuat koneksi database
+            db = new DB();
+            // query update akumulatif (skor lama + skor baru)
             String sql = "UPDATE tbenefit SET skor = skor + " + score +
                     ", peluru_meleset = peluru_meleset + " + missed +
                     ", sisa_peluru = " + ammo +
                     " WHERE username = '" + username + "'";
 
-            System.out.println("SQL: " + sql);
-            db.createUpdate(sql); // mengeksekusi update
-            db.closeConnection(); // tutup koneksi database
+            db.createUpdate(sql);
+            db.closeConnection();
         } catch (Exception e) {
-            System.err.println("Error saving data to DB:");
+            System.err.println("error saving data to db:");
             e.printStackTrace();
         }
     }
@@ -172,18 +175,24 @@ public class GameVM implements Runnable {
     @Override
     public void run() {
         /*
-         * Method run (override runnable)
-         * Inti dari game loop. mengupdate logic dan mengirim sinyal render terus
-         * menerus
+         * Method run
+         * inti dari game loop: update logic -> check collision -> render
          */
 
         Random rand = new Random();
         while (isRunning) {
             try {
-                updateLogic(rand); // mengupdate logika game
-                checkCollisions(); // memeriksa tabrakan antar objek
-                support.firePropertyChange("render", null, null); // mengirim sinyal render ke view
-                Thread.sleep(16); // delay sekitar 60 FPS
+                // 1. hitung pergerakan dan logika ai
+                updateLogic(rand);
+
+                // 2. cek tabrakan antar objek
+                checkCollisions();
+
+                // 3. kirim sinyal ke view untuk menggambar ulang layar
+                support.firePropertyChange("render", null, null);
+
+                // 4. jeda sebentar untuk menjaga frame rate (60 fps)
+                Thread.sleep(16);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -193,56 +202,62 @@ public class GameVM implements Runnable {
     private void updateLogic(Random rand) {
         /*
          * Method updateLogic
-         * Mengatur pergerakan alien, peluru, spawn musuh, dan fisika alien
+         * mengatur pergerakan entitas, spawn musuh, dan ai sederhana
          */
 
+        // update posisi player berdasarkan input
         player.update();
 
-        // spawn alien baru
+        // spawn alien baru dengan probabilitas 2% per frame
         if (rand.nextInt(100) < 2) {
             int alienX = rand.nextInt(GAME_WIDTH - 50);
-            int alienY = -50;
+            int alienY = -50; // muncul dari atas layar
             aliens.add(new Alien(alienX, alienY));
         }
 
-        // logic alien bergerak, menembak, dan collision dinding
+        // iterasi dan update setiap alien
         synchronized (aliens) {
             for (int i = 0; i < aliens.size(); i++) {
                 Entity a = aliens.get(i);
 
-                // 1. Simpan posisi lama
+                // simpan posisi lama sebelum bergerak
                 int oldX = a.x;
                 int oldY = a.y;
 
-                // 2. Gerakkan alien
+                // gerakkan alien ke bawah
                 a.update();
 
-                // 3. Cek Tabrakan Fisik dengan Obstacle (Alien Mentok)
+                // cek apakah alien menabrak obstacle (agar tidak tembus)
                 boolean isStuck = false;
-                for (Entity obs : obstacles) {
+                int k = 0;
+
+                // gunakan while loop untuk cek tabrakan tanpa break
+                while (k < obstacles.size() && !isStuck) {
+                    Entity obs = obstacles.get(k);
                     if (a.getBounds().intersects(obs.getBounds())) {
-                        isStuck = true;
-                        break;
+                        isStuck = true; // set flag stuck
                     }
+                    k++;
                 }
 
-                // 4. Jika nabrak, kembalikan posisi (Undo movement)
+                // jika stuck, kembalikan ke posisi sebelumnya (undo move)
                 if (isStuck) {
                     a.x = oldX;
                     a.y = oldY;
                 }
 
-                // Alien Menembak (Aiming Logic)
-                if (rand.nextInt(100) < 1) { // probabilitas tembak
+                // logika ai menembak (1% chance per frame)
+                if (rand.nextInt(100) < 1) {
+                    // hitung titik tengah alien dan player
                     double startX = a.x + (a.width / 2.0);
                     double startY = a.y + a.height;
                     double targetX = player.x + (player.width / 2.0);
                     double targetY = player.y + (player.height / 2.0);
 
-                    // hitung sudut tembak ke arah player
+                    // hitung sudut tembak ke arah player menggunakan arctan
                     double angleToPlayer = Math.atan2(targetY - startY, targetX - startX);
 
-                    // batasi sudut tembak (Cone of Fire)
+                    // batasi sudut tembak (cone of fire 45 derajat)
                     double centerAngle = Math.PI / 2;
                     double maxSpread = Math.toRadians(45);
                     if (angleToPlayer < centerAngle - maxSpread) {
@@ -251,53 +266,55 @@ public class GameVM implements Runnable {
                         angleToPlayer = centerAngle + maxSpread;
                     }
 
-                    // konversi sudut ke velocity vector
+                    // konversi sudut menjadi vector kecepatan peluru
                     double bulletSpeed = 5.0;
                     double velX = bulletSpeed * Math.cos(angleToPlayer);
                     double velY = bulletSpeed * Math.sin(angleToPlayer);
 
-                    // tambah peluru alien
                     alienBullets.add(new Bullet((int) startX, (int) startY, velX, velY, false));
                 }
 
-                // hapus alien jika lewat batas layar
+                // hapus alien jika sudah melewati batas bawah layar
                 if (a.y > GAME_HEIGHT)
                     aliens.remove(i--);
             }
         }
 
-        // logic peluru pemain
+        // update posisi peluru player
         synchronized (playerBullets) {
             for (int i = 0; i < playerBullets.size(); i++) {
                 Entity b = playerBullets.get(i);
                 b.update();
+                // hapus jika keluar batas atas
                 if (b.y < 0)
                     playerBullets.remove(i--);
             }
         }
 
-        // logic peluru alien
+        // update posisi peluru alien
         synchronized (alienBullets) {
             for (int i = 0; i < alienBullets.size(); i++) {
                 Entity b = alienBullets.get(i);
                 b.update();
 
+                // hapus jika keluar dari layar manapun
                 if (b.y > GAME_HEIGHT || b.x < 0 || b.x > GAME_WIDTH) {
+                    // hitung sebagai missed (bonus ammo untuk player)
                     missed++;
                     if (missed % 5 == 0) {
-                        ammo += 5; // bonus peluru jika musuh sering meleset
+                        ammo += 5;
                     }
                     alienBullets.remove(i--);
                 }
             }
         }
 
-        // logic animasi ledakan
+        // update animasi ledakan
         synchronized (explosions) {
             for (int i = 0; i < explosions.size(); i++) {
                 Explosion ex = (Explosion) explosions.get(i);
                 ex.update();
-
+                // hapus ledakan jika animasinya selesai
                 if (ex.isFinished()) {
                     explosions.remove(i--);
                 }
@@ -308,83 +325,89 @@ public class GameVM implements Runnable {
     private void respawnObstacle(Obstacle obs) {
         /*
          * Method respawnObstacle
-         * Helper untuk memindahkan obstacle yang hancur ke posisi baru
+         * memindahkan obstacle yang hancur ke posisi baru secara acak
          */
 
         Random rand = new Random();
         int newX = rand.nextInt(GAME_WIDTH - 50);
         int newY = rand.nextInt(GAME_HEIGHT - 300) + 50;
 
-        obs.reset(newX, newY); // reset HP dan posisi
+        obs.reset(newX, newY);
     }
 
     private void checkCollisions() {
         /*
-         * Method checkCollisions (NO BREAK VERSION)
-         * Mengganti 'break' dengan pengecekan kondisi flag (!bulletDestroyed)
+         * Method checkCollisions
+         * deteksi tabrakan menggunakan while loop (tanpa break)
          */
 
-        // 1. Peluru Pemain vs (Alien & Obstacle)
+        // 1. cek interaksi peluru pemain terhadap alien dan obstacle
         synchronized (playerBullets) {
             for (int i = 0; i < playerBullets.size(); i++) {
                 Entity bEntity = playerBullets.get(i);
                 Bullet b = (Bullet) bEntity;
                 boolean bulletDestroyed = false;
 
-                // Cek vs Alien
+                // cek tabrakan dengan alien
                 synchronized (aliens) {
-                    for (int j = 0; j < aliens.size(); j++) {
-                        // HANYA CEK JIKA PELURU BELUM HANCUR
-                        if (!bulletDestroyed) {
-                            Entity a = aliens.get(j);
-                            if (b.getBounds().intersects(a.getBounds())) {
-                                explosions.add(new Explosion(a.x, a.y));
-                                aliens.remove(j);
-                                score += 10;
-                                bulletDestroyed = true;
-                                // break dihapus, loop lanjut tapi if(!bulletDestroyed) akan false
-                            }
+                    int j = 0;
+                    // looping alien, berhenti jika list habis atau peluru sudah meledak
+                    while (j < aliens.size() && !bulletDestroyed) {
+                        Entity a = aliens.get(j);
+                        if (b.getBounds().intersects(a.getBounds())) {
+                            // tambah efek ledakan dan hapus alien
+                            explosions.add(new Explosion(a.x, a.y));
+                            aliens.remove(j);
+                            score += 10;
+                            bulletDestroyed = true; // set flag agar loop berhenti
                         }
+                        j++;
                     }
                 }
 
-                // Cek vs Obstacle
-                // Loop tetap berjalan, tapi kita cek status dulu
-                for (Entity eObs : obstacles) {
-                    if (!bulletDestroyed) { // Cek apakah peluru masih ada
+                // cek tabrakan dengan obstacle (hanya jika peluru belum hancur)
+                if (!bulletDestroyed) {
+                    int k = 0;
+                    // looping obstacle tanpa break
+                    while (k < obstacles.size() && !bulletDestroyed) {
+                        Entity eObs = obstacles.get(k);
                         Obstacle obs = (Obstacle) eObs;
 
                         if (b.getBounds().intersects(obs.getBounds())) {
+                            // kurangi hp batu
                             boolean destroyed = obs.takeDamage(10);
 
                             if (destroyed) {
+                                // jika hancur, beri skor dan respawn batu
                                 explosions.add(new Explosion(obs.x, obs.y));
                                 score += 5;
                                 respawnObstacle(obs);
                             }
-                            bulletDestroyed = true;
-                            // break dihapus
+                            bulletDestroyed = true; // set flag agar loop berhenti
                         }
+                        k++;
                     }
                 }
 
+                // hapus peluru dari list jika sudah menabrak sesuatu
                 if (bulletDestroyed) {
                     playerBullets.remove(i--);
                 }
             }
         }
 
-        // 2. Peluru Alien vs (Player & Obstacle)
+        // 2. cek interaksi peluru alien terhadap player dan obstacle
         synchronized (alienBullets) {
             for (int i = 0; i < alienBullets.size(); i++) {
                 Entity bEntity = alienBullets.get(i);
                 Bullet b = (Bullet) bEntity;
                 boolean bulletDestroyed = false;
 
-                // Cek vs Player
+                // cek tabrakan dengan player
                 if (b.getBounds().intersects(player.getBounds())) {
                     player.takeDamage(10);
 
+                    // cek kondisi game over
                     if (player.isDead()) {
                         stopGame(true);
                         support.firePropertyChange("gameOver", false, true);
@@ -393,11 +416,13 @@ public class GameVM implements Runnable {
                     bulletDestroyed = true;
                 }
 
-                // Cek vs Obstacle
-                // Gunakan if (!bulletDestroyed) sebagai pengganti break
-                for (Entity eObs : obstacles) {
-                    if (!bulletDestroyed) { // PENTING: Cek status peluru
+                // cek tabrakan dengan obstacle (friendly fire alien ke batu)
+                if (!bulletDestroyed) {
+                    int k = 0;
+                    while (k < obstacles.size() && !bulletDestroyed) {
+                        Entity eObs = obstacles.get(k);
                         Obstacle obs = (Obstacle) eObs;
+
                         if (b.getBounds().intersects(obs.getBounds())) {
                             boolean destroyed = obs.takeDamage(10);
 
@@ -406,15 +431,15 @@ public class GameVM implements Runnable {
                                 respawnObstacle(obs);
                             }
 
-                            // Logika Missed saat kena batu
+                            // logika missed: jika kena batu, dianggap meleset dari player
                             missed++;
                             if (missed % 5 == 0) {
                                 ammo += 5;
                             }
 
-                            bulletDestroyed = true;
-                            // break dihapus
+                            bulletDestroyed = true; // loop berhenti
                         }
+                        k++;
                     }
                 }
 
@@ -424,12 +449,13 @@ public class GameVM implements Runnable {
             }
         }
 
-        // 3. Player vs Obstacle (Tidak ada break di kode asli, jadi aman)
+        // 3. cek tabrakan fisik player dengan obstacle
         for (Entity eObs : obstacles) {
             Obstacle obs = (Obstacle) eObs;
 
             if (player.getBounds().intersects(obs.getBounds())) {
                 player.takeDamage(20);
+                // batu menerima damage besar jika ditabrak
                 boolean obsDestroyed = obs.takeDamage(50);
 
                 if (player.isDead()) {
@@ -442,16 +468,17 @@ public class GameVM implements Runnable {
                     explosions.add(new Explosion(obs.x, obs.y));
                     respawnObstacle(obs);
                 } else {
+                    // efek mental (knockback) agar player tidak nyangkut
                     player.y += 20;
                 }
             }
         }
     }
-    
+
     public void updatePlayerInput(boolean up, boolean down, boolean left, boolean right) {
         /*
          * Method updatePlayerInput
-         * Meneruskan input keyboard dari view ke model player
+         * meneruskan status tombol keyboard dari view ke model player
          */
         player.setDirection(up, down, left, right);
     }
@@ -459,18 +486,18 @@ public class GameVM implements Runnable {
     public void playerShoot() {
         /*
          * Method playerShoot
-         * Method untuk menembakkan peluru dari pemain
+         * logika player menembak: spawn peluru dan kirim sinyal suara
          */
 
         if (ammo > 0) {
-            // hitung posisi X biar di tengah
+            // posisi peluru di tengah atas sprite player
             int bulletX = player.x + (player.width / 2) - 5;
             int bulletY = player.y;
 
-            // tambah peluru dengan velocity arah atas
             playerBullets.add(new Bullet(bulletX, bulletY, 0, -10.0, true));
 
             ammo--;
+            // kirim sinyal ke gamepanel untuk memutar sfx
             support.firePropertyChange("sfx_shoot", null, null);
         }
     }
@@ -478,12 +505,12 @@ public class GameVM implements Runnable {
     public void addPropertyChangeListener(PropertyChangeListener pcl) {
         /*
          * Method addPropertyChangeListener
-         * Method untuk menambahkan listener ke property change support
+         * mendaftarkan listener untuk komunikasi observer pattern
          */
         support.addPropertyChangeListener(pcl);
     }
 
-    // getter untuk atribut game
+    // kumpulan method getter untuk diakses oleh view saat render
     public Entity getPlayer() {
         return player;
     }

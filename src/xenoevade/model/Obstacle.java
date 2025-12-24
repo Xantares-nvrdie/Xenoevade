@@ -7,23 +7,24 @@ Description: Class to represent obstacles with HP display
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 package xenoevade.model;
 
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.FontMetrics; // untuk perhitungan dimensi teks
-import java.awt.Graphics;
-import javax.imageio.ImageIO;
+import java.awt.Color; //untuk warna teks
+import java.awt.Font; //untuk font teks
+import java.awt.FontMetrics; //untuk mengukur teks
+import java.awt.Graphics; //untuk menggambar
+import java.net.URL; //untuk URL resource
+import javax.imageio.ImageIO; //untuk membaca file gambar
 
 public class Obstacle extends Entity {
-    private int hp;
-    private final int MAX_HP = 50; // konstanta hp maksimal
+    private int hp; // health points obstacle
+    private final int MAX_HP = 50; // nilai hp maksimum
 
     public Obstacle(int x, int y) {
         /*
          * Method Obstacle
-         * Konstruktor untuk inisialisasi obstacle
+         * konstruktor untuk inisialisasi obstacle
          */
 
-        // inisialisasi dengan ukuran default sementara (50, 50)
+        // inisialisasi ukuran default 50x50
         super(x, y, 50, 50);
         this.hp = MAX_HP;
         loadAsset();
@@ -32,19 +33,21 @@ public class Obstacle extends Entity {
     private void loadAsset() {
         /*
          * Method loadAsset
-         * Method private untuk memuat gambar sprite obstacle
+         * memuat gambar sprite obstacle dari resources
          */
-
         try {
-            this.sprite = ImageIO.read(getClass().getResource("/assets/obstacle.png"));
+            URL url = getClass().getResource("/assets/obstacle.png");
+            if (url == null)
+                return;
 
-            // REVISI: Memaksa ukuran menjadi 50x50 (atau lebih besar) agar tidak kekecilan
-            // Meskipun gambar aslinya kecil, render akan men-scale gambar ke ukuran ini
+            this.sprite = ImageIO.read(url);
+
+            // paksa ukuran menjadi 50x50 untuk konsistensi render
             this.width = 50;
             this.height = 50;
 
         } catch (Exception e) {
-            System.err.println("Error loading obstacle sprite: " + e.getMessage());
+            System.err.println("gagal memuat obstacle: " + e.getMessage());
         }
     }
 
@@ -52,7 +55,7 @@ public class Obstacle extends Entity {
     public void update() {
         /*
          * Method update
-         * Obstacle bersifat statis (diam), jadi tidak ada logika pergerakan
+         * kosong karena obstacle bersifat statis (diam)
          */
     }
 
@@ -60,26 +63,23 @@ public class Obstacle extends Entity {
     public void render(Graphics g) {
         /*
          * Method render
-         * Override method render untuk menampilkan sprite dan teks HP di tengahnya
+         * override untuk menampilkan sprite dan teks hp di tengah
          */
 
-        super.render(g); // gambar sprite batu terlebih dahulu
+        super.render(g); // render gambar via parent
 
-        // konfigurasi font untuk teks HP
+        // konfigurasi tampilan teks
         g.setColor(Color.WHITE);
         Font font = new Font("SansSerif", Font.BOLD, 14);
         g.setFont(font);
 
         String hpText = String.valueOf(hp);
-        FontMetrics metrics = g.getFontMetrics(font); // untuk mengukur dimensi teks
+        FontMetrics metrics = g.getFontMetrics(font);
 
-        // hitung posisi X (tengah horizontal)
+        // kalkulasi posisi tengah (center alignment)
         int textWidth = metrics.stringWidth(hpText);
-        int textX = (int) x + (width - textWidth) / 2;
-
-        // hitung posisi Y (tengah vertikal)
-        // rumus: Y_Batu + (Setengah Tinggi Batu) - (Setengah Tinggi Teks) + Ascent
-        int textY = (int) y + ((height - metrics.getHeight()) / 2) + metrics.getAscent();
+        int textX = x + (width - textWidth) / 2;
+        int textY = y + ((height - metrics.getHeight()) / 2) + metrics.getAscent();
 
         g.drawString(hpText, textX, textY);
     }
@@ -87,7 +87,7 @@ public class Obstacle extends Entity {
     public boolean takeDamage(int damage) {
         /*
          * Method takeDamage
-         * Mengurangi HP obstacle. Mengembalikan true jika hancur.
+         * mengurangi hp dan mengembalikan status hancur
          */
         this.hp -= damage;
         return this.hp <= 0;
@@ -96,7 +96,7 @@ public class Obstacle extends Entity {
     public void reset(int newX, int newY) {
         /*
          * Method reset
-         * Mengembalikan kondisi obstacle seperti baru di posisi lain (respawn)
+         * mengembalikan kondisi obstacle di posisi baru (respawn)
          */
         this.x = newX;
         this.y = newY;

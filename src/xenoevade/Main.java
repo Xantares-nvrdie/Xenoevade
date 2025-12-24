@@ -11,7 +11,6 @@ import xenoevade.view.MainFrame; //import frame utama
 import javax.swing.SwingUtilities; //thread safety
 
 public class Main {
-
     public static void main(String[] args) {
         /*
          * Method main
@@ -19,6 +18,7 @@ public class Main {
          * agar aman untuk Swing GUI
          */
 
+        // menjalankan pembuatan frame utama di EDT
         SwingUtilities.invokeLater(() -> {
             new MainFrame();
         });
