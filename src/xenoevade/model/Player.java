@@ -8,55 +8,65 @@ Description: Class to represent the player spaceship
 package xenoevade.model;
 
 import java.awt.Image; //untuk variabel penampung gambar
+import java.net.URL; //untuk URL resource
 import javax.imageio.ImageIO; //untuk membaca file gambar
 
 public class Player extends Entity {
-    private int velX; // kecepatan horizontal
-    private int velY; // kecepatan vertikal
-    private int speed = 5; // kecepatan gerak player
+    // variabel pergerakan
+    private int velX, velY;
+    private int speed = 5;
 
-    // Atribut untuk menyimpan variasi aset gambar
+    // variabel aset gambar untuk animasi sederhana
     private Image imgCenter;
     private Image imgLeft;
     private Image imgRight;
 
+    // variabel status pemain
     private int hp;
     private final int MAX_HP = 100;
 
     public Player(int x, int y) {
         /*
          * Method Player
-         * Konstruktor untuk inisialisasi player
-         * Menerima masukan posisi awal x dan y
+         * konstruktor untuk inisialisasi player
          */
 
-        // Memanggil konstruktor Entity (x, y, width, height)
-        // Sesuaikan 64, 64 dengan ukuran asli gambar player.png Anda
+        // inisialisasi dengan ukuran 64x64
         super(x, y, 64, 64);
 
         this.velX = 0;
         this.velY = 0;
         this.hp = MAX_HP;
 
-        loadAssets(); // memuat semua variasi gambar
+        loadAssets();
     }
 
     private void loadAssets() {
         /*
          * Method loadAssets
-         * Method private untuk memuat gambar sprite player (kiri, kanan, tengah)
+         * memuat sprite player dan variasi arah gerak
          */
         try {
-            // Mengambil gambar dari folder assets
-            imgCenter = ImageIO.read(getClass().getResource("/assets/player.png"));
-            imgLeft = ImageIO.read(getClass().getResource("/assets/player_left.png"));
-            imgRight = ImageIO.read(getClass().getResource("/assets/player_right.png"));
+            // ambil resource dari classpath
+            URL urlCenter = getClass().getResource("/assets/player.png");
+            URL urlLeft = getClass().getResource("/assets/player_left.png");
+            URL urlRight = getClass().getResource("/assets/player_right.png");
 
-            // Set gambar default (posisi lurus)
+            // pastikan resource ditemukan sebelum diload
+            if (urlCenter == null || urlLeft == null || urlRight == null) {
+                System.err.println("aset player tidak lengkap");
+                return;
+            }
+
+            imgCenter = ImageIO.read(urlCenter);
+            imgLeft = ImageIO.read(urlLeft);
+            imgRight = ImageIO.read(urlRight);
+
+            // set tampilan awal
             this.sprite = imgCenter;
 
         } catch (Exception e) {
-            System.err.println("Error loading player sprite: " + e.getMessage());
+            System.err.println("gagal memuat sprite player: " + e.getMessage());
         }
     }
 
@@ -64,22 +74,23 @@ public class Player extends Entity {
     public void update() {
         /*
          * Method update
-         * Logika pergerakan player dan animasi sprite berdasarkan input user
+         * mengatur posisi, animasi, dan batas layar
          */
 
         x += velX;
         y += velY;
 
-        // Logika pergantian gambar berdasarkan arah gerak (Animasi)
+        // logika animasi sprite berdasarkan arah
         if (velX < 0) {
-            this.sprite = imgLeft; // Jika gerak ke kiri, pakai gambar miring kiri
+            this.sprite = imgLeft;
         } else if (velX > 0) {
-            this.sprite = imgRight; // Jika gerak ke kanan, pakai gambar miring kanan
+            this.sprite = imgRight;
         } else {
-            this.sprite = imgCenter; // Jika diam/gerak vertikal, pakai gambar lurus
+            this.sprite = imgCenter;
         }
 
-        // Logika agar player tidak keluar dari layar (Asumsi layar 800x600)
+        // cegah player keluar dari layar (clamp position)
+        // asumsi ukuran layar game 800x600
         if (x < 0)
             x = 0;
         if (y < 0)
@@ -93,14 +104,14 @@ public class Player extends Entity {
     public void setDirection(boolean up, boolean down, boolean left, boolean right) {
         /*
          * Method setDirection
-         * Method untuk mengatur arah gerak player berdasarkan input keyboard
+         * mengubah vektor kecepatan berdasarkan input keyboard
          */
 
-        // Reset kecepatan
+        // reset kecepatan sebelum kalkulasi baru
         velX = 0;
         velY = 0;
 
-        // Set kecepatan berdasarkan tombol yang aktif
+        // atur kecepatan berdasarkan input
         if (up)
             velY = -speed;
         if (down)
@@ -110,9 +121,12 @@ public class Player extends Entity {
         if (right)
             velX = speed;
     }
-    
+
     public void takeDamage(int damage) {
-        /* Mengurangi HP player dan memastikan tidak negatif */
+        /*
+         * Method takeDamage
+         * mengurangi hp player
+         */
         this.hp -= damage;
         if (this.hp < 0) {
             this.hp = 0;
@@ -120,21 +134,21 @@ public class Player extends Entity {
     }
 
     public boolean isDead() {
-        /* Mengembalikan true jika HP habis */
+        /*
+         * Method isDead
+         * cek apakah hp habis
+         */
         return this.hp <= 0;
     }
 
     public int getHp() {
-        /* Getter untuk mengambil nilai HP saat ini */
         return this.hp;
     }
 
     public int getMaxHp() {
-        /* Getter untuk nilai Max HP (berguna jika mau bikin Health Bar nanti) */
         return MAX_HP;
     }
 
-    // Setter untuk kontrol keyboard
     public void setVelX(int velX) {
         this.velX = velX;
     }

@@ -219,11 +219,14 @@ public class GameVM implements Runnable {
 
                 // 3. Cek Tabrakan Fisik dengan Obstacle (Alien Mentok)
                 boolean isStuck = false;
-                for (Entity obs : obstacles) {
+                int k = 0;
+                // Gunakan while untuk menggantikan for-break
+                while (k < obstacles.size() && !isStuck) {
+                    Entity obs = obstacles.get(k);
                     if (a.getBounds().intersects(obs.getBounds())) {
-                        isStuck = true;
-                        break;
+                        isStuck = true; // flag ini menghentikan loop
                     }
+                    k++;
                 }
 
                 // 4. Jika nabrak, kembalikan posisi (Undo movement)
@@ -320,8 +323,8 @@ public class GameVM implements Runnable {
 
     private void checkCollisions() {
         /*
-         * Method checkCollisions (NO BREAK VERSION)
-         * Mengganti 'break' dengan pengecekan kondisi flag (!bulletDestroyed)
+         * Method checkCollisions (WHILE LOOP VERSION)
+         * Mengganti loop for-break dengan while loop
          */
 
         // 1. Peluru Pemain vs (Alien & Obstacle)
@@ -333,38 +336,39 @@ public class GameVM implements Runnable {
 
                 // Cek vs Alien
                 synchronized (aliens) {
-                    for (int j = 0; j < aliens.size(); j++) {
-                        // HANYA CEK JIKA PELURU BELUM HANCUR
-                        if (!bulletDestroyed) {
-                            Entity a = aliens.get(j);
-                            if (b.getBounds().intersects(a.getBounds())) {
-                                explosions.add(new Explosion(a.x, a.y));
-                                aliens.remove(j);
-                                score += 10;
-                                bulletDestroyed = true;
-                                // break dihapus, loop lanjut tapi if(!bulletDestroyed) akan false
-                            }
+                    int j = 0;
+                    // Gunakan while: loop berhenti jika list habis ATAU peluru sudah hancur
+                    while (j < aliens.size() && !bulletDestroyed) {
+                        Entity a = aliens.get(j);
+                        if (b.getBounds().intersects(a.getBounds())) {
+                            explosions.add(new Explosion(a.x, a.y));
+                            aliens.remove(j); // alien mati instant
+                            score += 10;
+                            bulletDestroyed = true; // flag ini akan menghentikan while loop
                         }
+                        j++;
                     }
                 }
 
                 // Cek vs Obstacle
-                // Loop tetap berjalan, tapi kita cek status dulu
-                for (Entity eObs : obstacles) {
-                    if (!bulletDestroyed) { // Cek apakah peluru masih ada
+                if (!bulletDestroyed) {
+                    int k = 0;
+                    // Gunakan while untuk iterasi obstacles
+                    while (k < obstacles.size() && !bulletDestroyed) {
+                        Entity eObs = obstacles.get(k);
                         Obstacle obs = (Obstacle) eObs;
 
                         if (b.getBounds().intersects(obs.getBounds())) {
-                            boolean destroyed = obs.takeDamage(10);
+                            boolean destroyed = obs.takeDamage(10); // kurangi HP batu
 
                             if (destroyed) {
                                 explosions.add(new Explosion(obs.x, obs.y));
                                 score += 5;
-                                respawnObstacle(obs);
+                                respawnObstacle(obs); // respawn batu
                             }
-                            bulletDestroyed = true;
-                            // break dihapus
+                            bulletDestroyed = true; // flag ini akan menghentikan while loop
                         }
+                        k++;
                     }
                 }
 
@@ -383,7 +387,7 @@ public class GameVM implements Runnable {
 
                 // Cek vs Player
                 if (b.getBounds().intersects(player.getBounds())) {
-                    player.takeDamage(10);
+                    player.takeDamage(10); // kurangi HP player
 
                     if (player.isDead()) {
                         stopGame(true);
@@ -393,17 +397,20 @@ public class GameVM implements Runnable {
                     bulletDestroyed = true;
                 }
 
-                // Cek vs Obstacle
-                // Gunakan if (!bulletDestroyed) sebagai pengganti break
-                for (Entity eObs : obstacles) {
-                    if (!bulletDestroyed) { // PENTING: Cek status peluru
+                // Cek vs Obstacle (Alien juga bisa hancurkan batu)
+                if (!bulletDestroyed) {
+                    int k = 0;
+                    // Gunakan while agar bisa berhenti tanpa break
+                    while (k < obstacles.size() && !bulletDestroyed) {
+                        Entity eObs = obstacles.get(k);
                         Obstacle obs = (Obstacle) eObs;
+
                         if (b.getBounds().intersects(obs.getBounds())) {
-                            boolean destroyed = obs.takeDamage(10);
+                            boolean destroyed = obs.takeDamage(10); // kurangi HP batu
 
                             if (destroyed) {
                                 explosions.add(new Explosion(obs.x, obs.y));
-                                respawnObstacle(obs);
+                                respawnObstacle(obs); // respawn batu
                             }
 
                             // Logika Missed saat kena batu
@@ -412,9 +419,9 @@ public class GameVM implements Runnable {
                                 ammo += 5;
                             }
 
-                            bulletDestroyed = true;
-                            // break dihapus
+                            bulletDestroyed = true; // flag ini akan menghentikan while loop
                         }
+                        k++;
                     }
                 }
 
@@ -424,30 +431,33 @@ public class GameVM implements Runnable {
             }
         }
 
-        // 3. Player vs Obstacle (Tidak ada break di kode asli, jadi aman)
+        // 3. Player vs Obstacle (Tabrakan Fisik)
         for (Entity eObs : obstacles) {
             Obstacle obs = (Obstacle) eObs;
 
             if (player.getBounds().intersects(obs.getBounds())) {
-                player.takeDamage(20);
-                boolean obsDestroyed = obs.takeDamage(50);
+                player.takeDamage(20); // player kena damage tabrakan
+                boolean obsDestroyed = obs.takeDamage(50); // batu kena damage besar
 
+                // cek status player
                 if (player.isDead()) {
                     stopGame(true);
                     support.firePropertyChange("gameOver", false, true);
                     return;
                 }
 
+                // cek status batu
                 if (obsDestroyed) {
                     explosions.add(new Explosion(obs.x, obs.y));
                     respawnObstacle(obs);
                 } else {
+                    // efek knockback sederhana agar tidak menempel
                     player.y += 20;
                 }
             }
         }
     }
-    
+
     public void updatePlayerInput(boolean up, boolean down, boolean left, boolean right) {
         /*
          * Method updatePlayerInput

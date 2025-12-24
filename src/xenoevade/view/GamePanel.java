@@ -7,16 +7,25 @@ Description: Game Canvas View (Painting & Input) with Audio
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 package xenoevade.view;
 
-import xenoevade.audio.AudioPlayer;
-import xenoevade.model.Entity;
-import xenoevade.viewmodel.GameVM;
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.image.BufferedImage;
+import xenoevade.audio.AudioPlayer; // Untuk pemutar audio
+import xenoevade.model.Entity; // Untuk entitas game
+import xenoevade.viewmodel.GameVM; // Untuk ViewModel game
+
+import javax.swing.JPanel; // Untuk panel GUI
+import javax.swing.JOptionPane; // Untuk dialog pesan
+import javax.swing.SwingUtilities; // Untuk threading GUI
+
+import java.awt.Color; // Untuk warna latar
+import java.awt.Font; // Untuk font teks
+import java.awt.Graphics; // Untuk menggambar grafik
+import java.awt.Image; // Untuk menggambar gambar
+import java.awt.event.KeyAdapter; // Untuk input keyboard
+import java.awt.event.KeyEvent; // Untuk event keyboard
+import java.awt.image.BufferedImage; // Untuk manipulasi gambar
+
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+
 import javax.imageio.ImageIO;
 
 
