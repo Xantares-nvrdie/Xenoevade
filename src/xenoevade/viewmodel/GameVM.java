@@ -320,9 +320,8 @@ public class GameVM implements Runnable {
 
     private void checkCollisions() {
         /*
-         * Method checkCollisions
-         * Memeriksa tabrakan peluru vs entitas, dan player vs obstacle
-         * Termasuk logika pengurangan HP dan Respawn
+         * Method checkCollisions (NO BREAK VERSION)
+         * Mengganti 'break' dengan pengecekan kondisi flag (!bulletDestroyed)
          */
 
         // 1. Peluru Pemain vs (Alien & Obstacle)
@@ -335,32 +334,36 @@ public class GameVM implements Runnable {
                 // Cek vs Alien
                 synchronized (aliens) {
                     for (int j = 0; j < aliens.size(); j++) {
-                        Entity a = aliens.get(j);
-                        if (b.getBounds().intersects(a.getBounds())) {
-                            explosions.add(new Explosion(a.x, a.y));
-                            aliens.remove(j); // alien mati instant
-                            score += 10;
-                            bulletDestroyed = true;
-                            break;
+                        // HANYA CEK JIKA PELURU BELUM HANCUR
+                        if (!bulletDestroyed) {
+                            Entity a = aliens.get(j);
+                            if (b.getBounds().intersects(a.getBounds())) {
+                                explosions.add(new Explosion(a.x, a.y));
+                                aliens.remove(j);
+                                score += 10;
+                                bulletDestroyed = true;
+                                // break dihapus, loop lanjut tapi if(!bulletDestroyed) akan false
+                            }
                         }
                     }
                 }
 
                 // Cek vs Obstacle
-                if (!bulletDestroyed) {
-                    for (Entity eObs : obstacles) {
+                // Loop tetap berjalan, tapi kita cek status dulu
+                for (Entity eObs : obstacles) {
+                    if (!bulletDestroyed) { // Cek apakah peluru masih ada
                         Obstacle obs = (Obstacle) eObs;
 
                         if (b.getBounds().intersects(obs.getBounds())) {
-                            boolean destroyed = obs.takeDamage(10); // kurangi HP batu
+                            boolean destroyed = obs.takeDamage(10);
 
                             if (destroyed) {
                                 explosions.add(new Explosion(obs.x, obs.y));
                                 score += 5;
-                                respawnObstacle(obs); // respawn batu
+                                respawnObstacle(obs);
                             }
                             bulletDestroyed = true;
-                            break;
+                            // break dihapus
                         }
                     }
                 }
@@ -380,7 +383,7 @@ public class GameVM implements Runnable {
 
                 // Cek vs Player
                 if (b.getBounds().intersects(player.getBounds())) {
-                    player.takeDamage(10); // kurangi HP player
+                    player.takeDamage(10);
 
                     if (player.isDead()) {
                         stopGame(true);
@@ -390,19 +393,27 @@ public class GameVM implements Runnable {
                     bulletDestroyed = true;
                 }
 
-                // Cek vs Obstacle (Alien juga bisa hancurkan batu)
-                if (!bulletDestroyed) {
-                    for (Entity eObs : obstacles) {
+                // Cek vs Obstacle
+                // Gunakan if (!bulletDestroyed) sebagai pengganti break
+                for (Entity eObs : obstacles) {
+                    if (!bulletDestroyed) { // PENTING: Cek status peluru
                         Obstacle obs = (Obstacle) eObs;
                         if (b.getBounds().intersects(obs.getBounds())) {
-                            boolean destroyed = obs.takeDamage(10); // kurangi HP batu
+                            boolean destroyed = obs.takeDamage(10);
 
                             if (destroyed) {
                                 explosions.add(new Explosion(obs.x, obs.y));
-                                respawnObstacle(obs); // respawn batu
+                                respawnObstacle(obs);
                             }
+
+                            // Logika Missed saat kena batu
+                            missed++;
+                            if (missed % 5 == 0) {
+                                ammo += 5;
+                            }
+
                             bulletDestroyed = true;
-                            break;
+                            // break dihapus
                         }
                     }
                 }
@@ -413,33 +424,30 @@ public class GameVM implements Runnable {
             }
         }
 
-        // 3. Player vs Obstacle (Tabrakan Fisik)
+        // 3. Player vs Obstacle (Tidak ada break di kode asli, jadi aman)
         for (Entity eObs : obstacles) {
             Obstacle obs = (Obstacle) eObs;
 
             if (player.getBounds().intersects(obs.getBounds())) {
-                player.takeDamage(20); // player kena damage tabrakan
-                boolean obsDestroyed = obs.takeDamage(50); // batu kena damage besar
+                player.takeDamage(20);
+                boolean obsDestroyed = obs.takeDamage(50);
 
-                // cek status player
                 if (player.isDead()) {
                     stopGame(true);
                     support.firePropertyChange("gameOver", false, true);
                     return;
                 }
 
-                // cek status batu
                 if (obsDestroyed) {
                     explosions.add(new Explosion(obs.x, obs.y));
                     respawnObstacle(obs);
                 } else {
-                    // efek knockback sederhana agar tidak menempel
                     player.y += 20;
                 }
             }
         }
     }
-
+    
     public void updatePlayerInput(boolean up, boolean down, boolean left, boolean right) {
         /*
          * Method updatePlayerInput

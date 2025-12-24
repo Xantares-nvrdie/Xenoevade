@@ -42,8 +42,8 @@ public class AudioPlayer {
             DataLine.Info info = new DataLine.Info(Clip.class, format);
             originalStream.read(audioData, 0, size);
 
-            // Buat 5 duplikat Clip (Sound Pool) untuk setiap file audio
-            // Ini memungkinkan 5 suara yang sama bunyi bebarengan
+            // Buat 20 duplikat Clip (Sound Pool) untuk setiap file audio
+            // Ini memungkinkan 20 suara yang sama bunyi bebarengan
             int poolSize = 20;
             for (int i = 0; i < poolSize; i++) {
                 Clip clip = (Clip) AudioSystem.getLine(info);
