@@ -39,6 +39,7 @@ public class GameVM implements Runnable {
     private int score = 0;
     private int missed = 0;
     private int ammo = 0;
+    private int initialDbMissed = 0;
 
     // atribut entities
     private Player player;
@@ -91,6 +92,8 @@ public class GameVM implements Runnable {
             if (rs.next()) {
                 // jika user ditemukan, ambil data sisa peluru terakhir
                 this.ammo = rs.getInt("sisa_peluru");
+                // simpan nilai missed awal untuk perhitungan akumulatif
+                this.initialDbMissed = rs.getInt("peluru_meleset");
             } else {
                 // jika user tidak ditemukan, buat record baru dengan nilai default
                 db.closeResultSet();
@@ -530,6 +533,7 @@ public class GameVM implements Runnable {
     public List<Entity> getAlienBullets() {
         return alienBullets;
     }
+    
 
     public int getScore() {
         return score;
@@ -547,5 +551,9 @@ public class GameVM implements Runnable {
         synchronized (explosions) {
             return new ArrayList<>(explosions);
         }
+    }
+
+    public int getAlienMissedBullets() {
+        return initialDbMissed + missed;
     }
 }
