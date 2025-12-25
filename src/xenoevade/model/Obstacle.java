@@ -18,6 +18,11 @@ public class Obstacle extends Entity {
     private int hp; // health points obstacle
     private final int MAX_HP = 50; // nilai hp maksimum
 
+    public Obstacle() {
+        // default constructor
+        this(0, 0);
+    }
+
     public Obstacle(int x, int y) {
         /*
          * Method Obstacle
@@ -66,7 +71,13 @@ public class Obstacle extends Entity {
          * override untuk menampilkan sprite dan teks hp di tengah
          */
 
-        super.render(g); // render gambar via parent
+        if (sprite != null) {
+            g.drawImage(sprite, x, y, width, height, null);
+        } else {
+            // Fallback visual jika aset gagal load (opsional, untuk debugging)
+            g.setColor(Color.DARK_GRAY);
+            g.fillRect(x, y, width, height);
+        }
 
         // konfigurasi tampilan teks
         g.setColor(Color.WHITE);

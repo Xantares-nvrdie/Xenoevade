@@ -7,19 +7,18 @@ Description: Game View Model (Business Logic & Threading)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 package xenoevade.viewmodel;
 
-import xenoevade.model.DB; //untuk koneksi database
 import xenoevade.model.Entity; //untuk representasi objek game parent
 import xenoevade.model.Explosion; //untuk efek ledakan
 import xenoevade.model.Player; //Import class Player
+import xenoevade.model.TBenefit; //Import class TBenefit
 import xenoevade.model.Alien; //Import class Alien
 import xenoevade.model.Bullet; //Import class Bullet
 import xenoevade.model.Obstacle; //Import class Obstacle
 
 import java.beans.PropertyChangeListener; //untuk observer pattern
 import java.beans.PropertyChangeSupport; //untuk mengirim notifikasi ke view
-import java.sql.ResultSet; //untuk menampung hasil query
 import java.util.ArrayList; //untuk thread list
-import java.util.Collections;
+import java.util.Collections; // untuk synchronized list
 import java.util.List; //interface list
 import java.util.Random; //untuk random posisi alien dan obstacle
 
@@ -28,7 +27,6 @@ public class GameVM implements Runnable {
     private PropertyChangeSupport support;
 
     // atribut database
-    private DB db;
     private String username;
 
     // atribut threading
@@ -39,6 +37,7 @@ public class GameVM implements Runnable {
     private int score = 0;
     private int missed = 0;
     private int ammo = 0;
+    private int initialDbMissed = 0;
 
     // atribut entities
     private Player player;
@@ -52,6 +51,9 @@ public class GameVM implements Runnable {
     private final int GAME_WIDTH = 800;
     private final int GAME_HEIGHT = 600;
 
+    // atribut tabel benefit
+    private TBenefit tableBenefit;
+
     public GameVM(String username) {
         /*
          * Method GameVM
@@ -60,16 +62,13 @@ public class GameVM implements Runnable {
 
         this.username = username;
         this.support = new PropertyChangeSupport(this);
-
+        this.tableBenefit = new TBenefit();
         // menggunakan synchronizedList agar aman diakses dari multiple thread
         aliens = Collections.synchronizedList(new ArrayList<>());
         playerBullets = Collections.synchronizedList(new ArrayList<>());
         alienBullets = Collections.synchronizedList(new ArrayList<>());
         explosions = Collections.synchronizedList(new ArrayList<>());
-
-        // obstacle statis tidak perlu sinkronisasi karena tidak berubah jumlahnya saat
-        // gameplay
-        obstacles = new ArrayList<>();
+        obstacles = Collections.synchronizedList(new ArrayList<>());
 
         loadPlayerData();
         initEntities();
@@ -81,30 +80,10 @@ public class GameVM implements Runnable {
          * memuat data pemain dari database mysql
          */
 
-        try {
-            // buka koneksi database
-            db = new DB();
-            String query = "SELECT * FROM tbenefit WHERE username = '" + username + "';";
-            db.createQuery(query);
-            ResultSet rs = db.getRS();
-
-            if (rs.next()) {
-                // jika user ditemukan, ambil data sisa peluru terakhir
-                this.ammo = rs.getInt("sisa_peluru");
-            } else {
-                // jika user tidak ditemukan, buat record baru dengan nilai default
-                db.closeResultSet();
-                String insertQuery = "INSERT INTO tbenefit (username, skor, peluru_meleset, sisa_peluru) VALUES ('"
-                        + username + "', 0, 0, 0);";
-                db.createUpdate(insertQuery);
-                this.ammo = 0;
-            }
-            // tutup koneksi agar tidak memory leak
-            db.closeResultSet();
-            db.closeConnection();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        tableBenefit.getOrCreateUser(username, (savedAmmo, savedMissed) -> {
+            this.ammo = savedAmmo;
+            this.initialDbMissed = savedMissed;
+        });
     }
 
     private void initEntities() {
@@ -155,21 +134,7 @@ public class GameVM implements Runnable {
          * Method saveDataToDB
          * menyimpan progress skor, missed, dan ammo ke database
          */
-
-        try {
-            db = new DB();
-            // query update akumulatif (skor lama + skor baru)
-            String sql = "UPDATE tbenefit SET skor = skor + " + score +
-                    ", peluru_meleset = peluru_meleset + " + missed +
-                    ", sisa_peluru = " + ammo +
-                    " WHERE username = '" + username + "'";
-
-            db.createUpdate(sql);
-            db.closeConnection();
-        } catch (Exception e) {
-            System.err.println("error saving data to db:");
-            e.printStackTrace();
-        }
+        tableBenefit.updateGameData(username, score, missed, ammo);
     }
 
     @Override
@@ -231,7 +196,7 @@ public class GameVM implements Runnable {
                 boolean isStuck = false;
                 int k = 0;
 
-                // gunakan while loop untuk cek tabrakan tanpa break
+                // gunakan while loop untuk cek tabrakan
                 while (k < obstacles.size() && !isStuck) {
                     Entity obs = obstacles.get(k);
                     if (a.getBounds().intersects(obs.getBounds())) {
@@ -547,5 +512,23 @@ public class GameVM implements Runnable {
         synchronized (explosions) {
             return new ArrayList<>(explosions);
         }
+    }
+
+    public int getAlienMissedBullets() {
+        return initialDbMissed + missed;
+    }
+
+    public int getPlayerHp() {
+        if (player != null) {
+            return player.getHp();
+        }
+        return 0;
+    }
+
+    public int getPlayerMaxHp() {
+        if (player != null) {
+            return player.getMaxHp();
+        }
+        return 100; // nilai default
     }
 }

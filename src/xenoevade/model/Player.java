@@ -6,7 +6,8 @@ Email: bintangfajarputra@upi.edu
 Description: Class to represent the player spaceship
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 package xenoevade.model;
-
+import java.awt.Color; //untuk warna fallback
+import java.awt.Graphics; //untuk menggambar
 import java.awt.Image; //untuk variabel penampung gambar
 import java.net.URL; //untuk URL resource
 import javax.imageio.ImageIO; //untuk membaca file gambar
@@ -24,6 +25,10 @@ public class Player extends Entity {
     // variabel status pemain
     private int hp;
     private final int MAX_HP = 100;
+
+    public Player() {
+        this(0, 0);
+    }
 
     public Player(int x, int y) {
         /*
@@ -104,7 +109,7 @@ public class Player extends Entity {
     public void setDirection(boolean up, boolean down, boolean left, boolean right) {
         /*
          * Method setDirection
-         * mengubah vektor kecepatan berdasarkan input keyboard
+         * mengubah vektor kecepatan berdasarkan input keyboard dan agar tidak patah-patah
          */
 
         // reset kecepatan sebelum kalkulasi baru
@@ -130,6 +135,21 @@ public class Player extends Entity {
         this.hp -= damage;
         if (this.hp < 0) {
             this.hp = 0;
+        }
+    }
+    
+    @Override
+    public void render(Graphics g) {
+        /*
+         * Method render
+         * Menggambar visual player (pesawat) ke layar
+         */
+        if (sprite != null) {
+            g.drawImage(sprite, x, y, width, height, null);
+        } else {
+            // Fallback visual warna biru jika sprite gagal dimuat
+            g.setColor(Color.BLUE);
+            g.fillRect(x, y, width, height);
         }
     }
 

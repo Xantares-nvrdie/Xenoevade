@@ -80,18 +80,18 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
          * inisialisasi musik latar, sfx tembak, dan game over
          */
 
-        // 1. inisialisasi musik gameplay
+        // inisialisasi musik gameplay
         bgmPlayer = new AudioPlayer("bgm2.wav");
-        bgmPlayer.setVolume(0.0f); // set volume normal
+        bgmPlayer.setVolume(-20.0f); // set volume normal
         bgmPlayer.loop(); // putar secara looping
 
-        // 2. inisialisasi musik game over
+        // inisialisasi musik game over
         gameOverPlayer = new AudioPlayer("die.wav");
-        gameOverPlayer.setVolume(0.0f);
+        gameOverPlayer.setVolume(-5.0f);
 
-        // 3. inisialisasi sfx tembakan
+        // inisialisasi sfx tembakan
         shootPlayer = new AudioPlayer("shoot.wav");
-        shootPlayer.setVolume(0.0f);
+        shootPlayer.setVolume(-2.0f);
     }
 
     private void loadAssets() {
@@ -251,8 +251,11 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
 
         // ambil objek player dan gambar
         Entity p = viewModel.getPlayer();
-        if (p != null)
+
+        // gunakan method render
+        if (p != null) {
             p.render(g);
+        }
 
         // render list entitas dengan sinkronisasi thread
         synchronized (viewModel.getAliens()) {
@@ -260,9 +263,11 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
                 a.render(g);
         }
 
-        // render obstacle (tidak perlu synchronized karena list statis)
-        for (Entity o : viewModel.getObstacles()) {
-            o.render(g);
+        // render obstacle
+        synchronized (viewModel.getObstacles()) {
+            for (Entity o : viewModel.getObstacles()) {
+                o.render(g);
+            }
         }
 
         // render peluru player
@@ -293,15 +298,8 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
          * menggambar ui di atas layer game (score, ammo, health)
          */
 
-        int hp = 0;
-        int maxHp = 100;
-
-        // ambil data hp dari player
-        if (viewModel.getPlayer() instanceof xenoevade.model.Player) {
-            xenoevade.model.Player player = (xenoevade.model.Player) viewModel.getPlayer();
-            hp = player.getHp();
-            maxHp = player.getMaxHp();
-        }
+        int hp = viewModel.getPlayerHp();
+        int maxHp = viewModel.getPlayerMaxHp();
 
         // konfigurasi posisi awal icon hati
         int heartsTotal = maxHp / 20;
@@ -346,5 +344,11 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
         String ammoText = "AMMO: " + viewModel.getAmmo();
         g.setColor(Color.GREEN);
         g.drawString(ammoText, getWidth() - 150, getHeight() - 20);
+
+        // tampilkan teks peluru meleset alien di bawah score
+        String missedText = "ALIEN MISS: " + viewModel.getAlienMissedBullets();
+        int missedWidth = g.getFontMetrics().stringWidth(missedText);
+        g.setColor(Color.ORANGE); // Gunakan warna oranye agar kontras
+        g.drawString(missedText, getWidth() - missedWidth - 20, 65);
     }
 }

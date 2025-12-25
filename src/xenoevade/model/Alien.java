@@ -9,10 +9,17 @@ package xenoevade.model;
 
 import javax.imageio.ImageIO; //untuk membaca file gambar
 import java.net.URL; //untuk URL resource
+import java.awt.Graphics; //untuk menggambar
+import java.awt.Color; //untuk warna fallback
 
 public class Alien extends Entity {
     private int speed; // kecepatan gerak alien
 
+    public Alien() {
+        // default constructor
+        this(0, 0);
+    }
+    
     public Alien(int x, int y) {
         /*
          * Method Alien
@@ -57,5 +64,20 @@ public class Alien extends Entity {
          * Logika pergerakan alien (otomatis turun ke bawah)
          */
         y += speed;
+    }
+
+    @Override
+    public void render(Graphics g) {
+        /*
+         * Method render
+         * Menampilkan visual alien pada koordinat aktif
+         */
+        if (sprite != null) {
+            g.drawImage(sprite, x, y, width, height, null);
+        } else {
+            // Visual fallback (jika sprite gagal load)
+            g.setColor(Color.RED);
+            g.fillRect(x, y, width, height);
+        }
     }
 }
