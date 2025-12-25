@@ -103,6 +103,12 @@ public class Bullet extends Entity {
         preciseX += velX;
         preciseY += velY;
 
+        /*
+         * why:
+         * y += velY -> y += (int) velY jadi kalo velY < 1.0 bakal selalu 0
+         * sehingga peluru ga bakal gerak.misal y =100, velY=0.5 -> y=100+0=100 terus
+         */
+
         // 2. Konversi ke posisi render (Integer)
         this.x = (int) preciseX;
         this.y = (int) preciseY;

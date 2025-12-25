@@ -38,7 +38,7 @@ public class TabelPengguna {
         try {
             DB db = new DB();
             // limit diperbanyak agar fitur scroll berguna
-            String q = "SELECT * FROM tbenefit ORDER BY skor DESC LIMIT 50";
+            String q = "SELECT * FROM tbenefit ORDER BY skor DESC";
             db.createQuery(q);
             ResultSet rs = db.getRS();
 

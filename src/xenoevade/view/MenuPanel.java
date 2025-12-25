@@ -7,7 +7,7 @@ Description: Main Menu View with Dark Overlay for Visibility
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
 package xenoevade.view;
 
-import xenoevade.model.TabelPengguna; //untuk model data tabel
+import xenoevade.viewmodel.MenuVM; //import viewmodel menu
 
 import java.awt.BorderLayout; //untuk layout border
 import java.awt.Color; //untuk warna
@@ -42,6 +42,8 @@ public class MenuPanel extends JPanel {
 
     private MainFrame mainFrame; // referensi mainframe induk
     private Image backgroundImage; // gambar latar belakang
+
+    private MenuVM menuVM = new MenuVM();
 
     // konstanta warna ui
     private final Color COLOR_NEON_GREEN = new Color(100, 255, 100);
@@ -286,7 +288,6 @@ public class MenuPanel extends JPanel {
          * mengambil data top skor dari model tabel pengguna
          */
 
-        TabelPengguna tp = new TabelPengguna();
-        return tp.getLeaderboardData();
+        return menuVM.getLeaderboardData();
     }
 }

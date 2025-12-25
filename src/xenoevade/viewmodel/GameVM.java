@@ -196,7 +196,7 @@ public class GameVM implements Runnable {
                 boolean isStuck = false;
                 int k = 0;
 
-                // gunakan while loop untuk cek tabrakan tanpa break
+                // gunakan while loop untuk cek tabrakan
                 while (k < obstacles.size() && !isStuck) {
                     Entity obs = obstacles.get(k);
                     if (a.getBounds().intersects(obs.getBounds())) {

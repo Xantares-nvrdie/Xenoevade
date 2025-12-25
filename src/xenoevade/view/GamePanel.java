@@ -82,16 +82,16 @@ public class GamePanel extends JPanel implements PropertyChangeListener {
 
         // inisialisasi musik gameplay
         bgmPlayer = new AudioPlayer("bgm2.wav");
-        bgmPlayer.setVolume(0.0f); // set volume normal
+        bgmPlayer.setVolume(-20.0f); // set volume normal
         bgmPlayer.loop(); // putar secara looping
 
         // inisialisasi musik game over
         gameOverPlayer = new AudioPlayer("die.wav");
-        gameOverPlayer.setVolume(0.0f);
+        gameOverPlayer.setVolume(-5.0f);
 
         // inisialisasi sfx tembakan
         shootPlayer = new AudioPlayer("shoot.wav");
-        shootPlayer.setVolume(0.0f);
+        shootPlayer.setVolume(-2.0f);
     }
 
     private void loadAssets() {
